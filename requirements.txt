@@ -1,0 +1,8 @@
+streamlit
+fz
+pandas
+plotly
+requests
+folium
+streamlit-folium
+streamlit-geolocation
