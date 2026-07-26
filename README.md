@@ -6,6 +6,8 @@ consommation énergétique d'un bâtiment, à partir d'un modèle Modelica
 photovoltaïque en autoconsommation, et météo réelle dynamique par
 position/dates.
 
+![Capture d'écran de l'application](screenshot.png)
+
 ## Aperçu
 
 - **Modèle physique** ([`BuildingOpt.mo`](BuildingOpt.mo)) : réseau RC 6 nœuds
