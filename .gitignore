@@ -14,6 +14,13 @@ BuildingOpt.makefile
 .fz/
 __pycache__/
 
+# Notebook working-directory artifacts (this app doesn't use them: it calls
+# app_fzr/ and downloads weather dynamically instead of weather_orly.txt)
+/run.sh
+/params.txt
+/params_robust.txt
+weather_orly.txt
+
 # Generated data / plots / logs (reproducible via the notebook or app)
 *.csv
 *.png

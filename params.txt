@@ -1,6 +1,0 @@
-Pheat=$Pheat
-Pcool=$Pcool
-ach_day=$ach_day
-ach_night=$ach_night
-e_ite=$e_ite
-e_iti=$e_iti
