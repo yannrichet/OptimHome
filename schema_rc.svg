@@ -1,0 +1,221 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 980" font-family="Helvetica, Arial, sans-serif">
+  <style>
+    .node { fill:#ffffff; stroke:#1f5aa8; stroke-width:2; }
+    .nodefixed { fill:#e8e8e8; stroke:#555; stroke-width:2; }
+    .nodelabel { fill:#0b2e57; font-size:20px; font-weight:bold; text-anchor:middle; }
+    .statelabel { fill:#0b2e57; font-size:12px; text-anchor:middle; }
+    .wire { stroke:#333; stroke-width:2; fill:none; }
+    .rlabel { fill:#333; font-size:14px; text-anchor:middle; }
+    .clabel { fill:#333; font-size:13px; text-anchor:middle; }
+    .band { opacity:0.35; }
+    .bandlabel { font-size:15px; font-weight:bold; text-anchor:middle; fill:#333; }
+    .tag { fill:#f5a623; stroke:#8a5a00; stroke-width:1.5; }
+    .taglabel { fill:#3a2400; font-size:14px; font-weight:bold; text-anchor:middle; }
+    .leader { stroke:#b07800; stroke-width:1.2; stroke-dasharray:3,3; fill:none; }
+    .flowarrow { stroke:#a01414; stroke-width:2; fill:none; marker-end:url(#arrowred); }
+    .bypassarrow { stroke:#0a7d32; stroke-width:2; fill:none; marker-end:url(#arrowgreen); }
+    .title { font-size:22px; font-weight:bold; fill:#111; }
+    .legend { font-size:13.5px; fill:#111; }
+    .legendnum { font-size:13.5px; font-weight:bold; fill:#8a5a00; }
+  </style>
+
+  <defs>
+    <marker id="arrowred" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#a01414"/>
+    </marker>
+    <marker id="arrowgreen" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#0a7d32"/>
+    </marker>
+  </defs>
+
+  <text x="20" y="26" class="title">Maillage RC du mur tricouche (BuildingTherm.mo / BuildingTherm.py)</text>
+  <text x="20" y="46" font-size="14" fill="#444">Intérieur (Tair) → extérieur (Tout). Repères ①…⑭ : détail dans la légende en bas (orangé = variable de conception fz/NSGA-II).</text>
+
+  <!-- ===================== Layer bands ===================== -->
+  <!-- ISOLANT INT : T1..T2 -->
+  <rect x="255" y="140" width="200" height="320" class="band" fill="#8ecae6"/>
+  <text x="355" y="130" class="bandlabel">ISOLANT INTÉRIEUR</text>
+  <!-- PARPAING : T3..T4 core -->
+  <rect x="555" y="140" width="200" height="320" class="band" fill="#adb5bd"/>
+  <text x="655" y="130" class="bandlabel">PARPAING (structure)</text>
+  <!-- ISOLANT EXT : T5..T6 -->
+  <rect x="855" y="140" width="200" height="320" class="band" fill="#8ecae6"/>
+  <text x="955" y="130" class="bandlabel">ISOLANT EXTÉRIEUR</text>
+
+  <!-- ===================== Main RC chain ===================== -->
+  <!-- y=300 main line -->
+  <line x1="194" y1="300" x2="1270" y2="300" class="wire"/>
+
+  <!-- Nodes -->
+  <circle cx="160" cy="300" r="34" class="node"/>
+  <text x="160" y="295" class="nodelabel">Tair</text>
+  <text x="160" y="313" class="statelabel">état, Cair</text>
+
+  <circle cx="305" cy="300" r="28" class="node"/>
+  <text x="305" y="296" class="nodelabel">T1</text>
+
+  <circle cx="405" cy="300" r="28" class="node"/>
+  <text x="405" y="296" class="nodelabel">T2</text>
+
+  <circle cx="605" cy="300" r="28" class="node"/>
+  <text x="605" y="296" class="nodelabel">T3</text>
+
+  <circle cx="705" cy="300" r="28" class="node"/>
+  <text x="705" y="296" class="nodelabel">T4</text>
+
+  <circle cx="905" cy="300" r="28" class="node"/>
+  <text x="905" y="296" class="nodelabel">T5</text>
+
+  <circle cx="1005" cy="300" r="28" class="node"/>
+  <text x="1005" y="296" class="nodelabel">T6</text>
+
+  <circle cx="1250" cy="300" r="34" class="nodefixed"/>
+  <text x="1250" y="295" class="nodelabel" fill="#333">Tout</text>
+  <text x="1250" y="313" class="statelabel" fill="#333">météo (fixé)</text>
+
+  <!-- Resistor labels along the chain -->
+  <text x="232" y="290" class="rlabel">Rsi</text>
+  <text x="355" y="290" class="rlabel">R12</text>
+  <text x="505" y="290" class="rlabel">R23</text>
+  <text x="655" y="290" class="rlabel">R34</text>
+  <text x="805" y="290" class="rlabel">R45</text>
+  <text x="955" y="290" class="rlabel">R56</text>
+  <text x="1130" y="290" class="rlabel">R6e</text>
+
+  <!-- Capacitors hanging to a ground rail, one per state node T1..T6 (Cair handled at Tair above) -->
+  <line x1="305" y1="328" x2="305" y2="400" class="wire"/>
+  <line x1="405" y1="328" x2="405" y2="400" class="wire"/>
+  <line x1="605" y1="328" x2="605" y2="400" class="wire"/>
+  <line x1="705" y1="328" x2="705" y2="400" class="wire"/>
+  <line x1="905" y1="328" x2="905" y2="400" class="wire"/>
+  <line x1="1005" y1="328" x2="1005" y2="400" class="wire"/>
+  <!-- capacitor symbols (two parallel plates) -->
+  <g stroke="#333" stroke-width="2.5">
+    <line x1="290" y1="400" x2="320" y2="400"/><line x1="290" y1="408" x2="320" y2="408"/>
+    <line x1="390" y1="400" x2="420" y2="400"/><line x1="390" y1="408" x2="420" y2="408"/>
+    <line x1="590" y1="400" x2="620" y2="400"/><line x1="590" y1="408" x2="620" y2="408"/>
+    <line x1="690" y1="400" x2="720" y2="400"/><line x1="690" y1="408" x2="720" y2="408"/>
+    <line x1="890" y1="400" x2="920" y2="400"/><line x1="890" y1="408" x2="920" y2="408"/>
+    <line x1="990" y1="400" x2="1020" y2="400"/><line x1="990" y1="408" x2="1020" y2="408"/>
+  </g>
+  <line x1="305" y1="408" x2="305" y2="430" class="wire"/>
+  <line x1="405" y1="408" x2="405" y2="430" class="wire"/>
+  <line x1="605" y1="408" x2="605" y2="430" class="wire"/>
+  <line x1="705" y1="408" x2="705" y2="430" class="wire"/>
+  <line x1="905" y1="408" x2="905" y2="430" class="wire"/>
+  <line x1="1005" y1="408" x2="1005" y2="430" class="wire"/>
+  <line x1="260" y1="430" x2="1050" y2="430" class="wire"/>
+  <text x="620" y="452" class="clabel">masse thermique des nœuds (C1…C6) — référence de dérivation, pas un vrai potentiel</text>
+  <circle cx="1110" cy="452" r="13" class="tag"/><text x="1110" y="457" class="taglabel">⑬</text>
+  <text x="1130" y="457" class="clabel" text-anchor="start">Awall (surface commune)</text>
+
+  <text x="305" y="422" class="clabel" dy="-2">C1</text>
+  <text x="405" y="422" class="clabel" dy="-2">C2</text>
+  <text x="605" y="422" class="clabel" dy="-2">C3</text>
+  <text x="705" y="422" class="clabel" dy="-2">C4</text>
+  <text x="905" y="422" class="clabel" dy="-2">C5</text>
+  <text x="1005" y="422" class="clabel" dy="-2">C6</text>
+
+  <!-- Cair capacitor for Tair -->
+  <line x1="160" y1="334" x2="160" y2="400" class="wire"/>
+  <g stroke="#333" stroke-width="2.5">
+    <line x1="145" y1="400" x2="175" y2="400"/><line x1="145" y1="408" x2="175" y2="408"/>
+  </g>
+  <line x1="160" y1="408" x2="160" y2="430" class="wire"/>
+  <text x="160" y="422" class="clabel" dy="-2">Cair</text>
+
+  <!-- ===================== Heat inputs into Tair (top), fan-in to the same point ===================== -->
+  <path d="M30,120 L160,266" class="flowarrow"/>
+  <text x="30" y="108" class="rlabel" fill="#a01414" text-anchor="start">Qheat (+)</text>
+  <circle cx="55" cy="175" r="13" class="tag"/><text x="55" y="180" class="taglabel">①</text>
+
+  <path d="M110,110 L160,266" class="flowarrow"/>
+  <text x="110" y="98" class="rlabel" fill="#a01414" text-anchor="middle">Qint (+)</text>
+  <circle cx="123" cy="165" r="13" class="tag"/><text x="123" y="170" class="taglabel">③</text>
+
+  <path d="M195,110 L160,266" class="flowarrow"/>
+  <text x="195" y="98" class="rlabel" fill="#a01414" text-anchor="middle">Qsol (+)</text>
+  <circle cx="197" cy="165" r="13" class="tag"/><text x="197" y="170" class="taglabel">④</text>
+
+  <path d="M280,120 L160,266" class="flowarrow"/>
+  <text x="280" y="108" class="rlabel" fill="#a01414" text-anchor="end">−Qcool</text>
+  <circle cx="262" cy="175" r="13" class="tag"/><text x="262" y="180" class="taglabel">②</text>
+
+  <!-- ===================== Ventilation / UAother bypass arc: Tout -> Tair directly ===================== -->
+  <!-- Flat top at y=70 (clear of the y=130 layer-band labels), short curved drops only near each end -->
+  <path d="M1250,266 C1250,170 1220,70 1150,70 L230,70 C170,70 160,170 160,266" class="bypassarrow"/>
+  <text x="700" y="64" class="rlabel" fill="#0a7d32" text-anchor="middle">UAv (ventilation) + UAother (toit/plancher/vitrages/ponts) · (Tout − Tair)</text>
+  <circle cx="1080" cy="70" r="13" fill="#f5a623" stroke="#8a5a00" stroke-width="1.5"/><text x="1080" y="75" class="taglabel">⑤</text>
+
+  <!-- ⑥ Rsi -->
+  <circle cx="232" cy="330" r="13" class="tag"/><text x="232" y="335" class="taglabel">⑥</text>
+  <!-- ⑦ Isolant int layer -->
+  <circle cx="355" cy="470" r="13" class="tag"/><text x="355" y="475" class="taglabel">⑦</text>
+  <!-- ⑧ Parpaing layer -->
+  <circle cx="655" cy="470" r="13" class="tag"/><text x="655" y="475" class="taglabel">⑧</text>
+  <!-- ⑨ Isolant ext layer -->
+  <circle cx="955" cy="470" r="13" class="tag"/><text x="955" y="475" class="taglabel">⑨</text>
+  <!-- ⑩ R6e -->
+  <circle cx="1127" cy="330" r="13" class="tag"/><text x="1127" y="335" class="taglabel">⑩</text>
+  <!-- ⑪ Tout / meteo -->
+  <circle cx="1250" cy="360" r="13" class="tag"/><text x="1250" y="365" class="taglabel">⑪</text>
+  <!-- ⑫ Cair -->
+  <circle cx="115" cy="418" r="13" class="tag"/><text x="115" y="423" class="taglabel">⑫</text>
+
+  <!-- ===================== PV / electrical sub-diagram ===================== -->
+  <rect x="1100" y="520" width="260" height="150" rx="10" fill="#fff7e6" stroke="#8a5a00" stroke-width="1.5"/>
+  <text x="1230" y="545" class="bandlabel" fill="#8a5a00">PV autoconsommation</text>
+  <text x="1230" y="568" font-size="13" text-anchor="middle">Pelec = Qheat + Qcool/seer + vent.</text>
+  <text x="1230" y="588" font-size="13" text-anchor="middle">Ppv = f(Ppv_kWc, PR_pv, G(h))</text>
+  <text x="1230" y="608" font-size="13" text-anchor="middle">Pgrid_cool = max(Pelec−Ppv,0)</text>
+  <text x="1230" y="628" font-size="13" text-anchor="middle">Pself_cool = min(Pelec,Ppv)</text>
+  <text x="1230" y="648" font-size="13" text-anchor="middle">Pexport = max(Ppv−Pelec,0)</text>
+  <circle cx="1345" cy="535" r="13" class="tag"/><text x="1345" y="540" class="taglabel">⑭</text>
+
+  <!-- ===================== Legend ===================== -->
+  <rect x="20" y="700" width="1360" height="260" rx="8" fill="#fafafa" stroke="#ccc"/>
+  <text x="35" y="725" font-size="16" font-weight="bold" fill="#111">Légende — variables de paramétrage associées à chaque repère</text>
+
+  <text x="35" y="752" class="legendnum">①</text>
+  <text x="60" y="752" class="legend">Qheat = clip(Kp·(Tset_h−Tair), 0, Pheat) — <tspan fill="#8a5a00" font-weight="bold">Pheat</tspan> (variable de conception), Tset_h, Kp</text>
+
+  <text x="35" y="774" class="legendnum">②</text>
+  <text x="60" y="774" class="legend">Qcool = clip(Kc·(Tair−Tset_c), 0, Pcool) — <tspan fill="#8a5a00" font-weight="bold">Pcool</tspan> (variable de conception), Tset_c, Kc</text>
+
+  <text x="35" y="796" class="legendnum">③</text>
+  <text x="60" y="796" class="legend">Apports internes fixes — Qint</text>
+
+  <text x="35" y="818" class="legendnum">④</text>
+  <text x="60" y="818" class="legend">Qsol = fsol·0,5·Awin·G(h) — Awin, fsol, météo G(h) (Open-Meteo)</text>
+
+  <text x="35" y="840" class="legendnum">⑤</text>
+  <text x="60" y="840" class="legend">UAv = (ach+boostN+vopen)·V·0,34 — <tspan fill="#8a5a00" font-weight="bold">ach_day, ach_night</tspan> (conception), ach, fanWhm3 ; UAother = f(UAother_ref, Sfloor, Sfloor_ref)</text>
+
+  <text x="35" y="862" class="legendnum">⑥⑩</text>
+  <text x="70" y="862" class="legend">Rsi = 1/(hi·Awall)+Riti/4 ; R6e = Rite/4+1/(he·Awall) — coefficients d'échange hi (intérieur), he (extérieur)</text>
+
+  <text x="35" y="884" class="legendnum">⑦</text>
+  <text x="60" y="884" class="legend">Isolant intérieur (R12, C1, C2) — <tspan fill="#8a5a00" font-weight="bold">e_iti</tspan> (conception), lam_iso, rhoc_iso</text>
+
+  <text x="35" y="906" class="legendnum">⑧</text>
+  <text x="60" y="906" class="legend">Parpaing (R23, R34, R45, C3, C4) — e_blk, lam_blk, rhoc_blk (matériau du mur, choisi dans l'app)</text>
+
+  <text x="35" y="928" class="legendnum">⑨</text>
+  <text x="60" y="928" class="legend">Isolant extérieur (R56, C5, C6) — <tspan fill="#8a5a00" font-weight="bold">e_ite</tspan> (conception), lam_iso, rhoc_iso</text>
+
+  <text x="720" y="752" class="legendnum">⑪</text>
+  <text x="745" y="752" class="legend">Tout = T2m(Open-Meteo) + dTout — décalage climatique</text>
+
+  <text x="720" y="774" class="legendnum">⑫</text>
+  <text x="745" y="774" class="legend">Cair = 1,2·1006·V·6 — V = Sfloor·Htot (géométrie)</text>
+
+  <text x="720" y="796" class="legendnum">⑬</text>
+  <text x="745" y="796" class="legend">Awall = max(4·√Sfloor·Htot−Awin, 1) — Sfloor, Htot, Awin (géométrie à base carrée)</text>
+
+  <text x="720" y="818" class="legendnum">⑭</text>
+  <text x="745" y="818" class="legend">Ppv_kWc (puissance crête PV, fixe), PR_pv (ratio de performance), seer (SEER de la PAC de froid)</text>
+
+  <text x="720" y="850" class="legend" font-style="italic">États intégrés (12) : Tair, T1…T6, et 5 énergies cumulées Eheat/Ecool/Egrid_cool/Eself_cool/Eexport</text>
+  <text x="720" y="872" class="legend" font-style="italic">(intégrées seulement après 14 j de mise en régime — cf. section "Équations résolues").</text>
+  <text x="720" y="900" class="legend" font-weight="bold">En gras/orangé : les 6 variables de conception pilotées par l'optimiseur (fz/NSGA-II).</text>
+</svg>

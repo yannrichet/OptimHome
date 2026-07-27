@@ -137,6 +137,8 @@ export PV) < 0.02 %.
 
 ### Équations résolues
 
+![Maillage RC et variables résolues](schema_rc.svg)
+
 Le modèle a 12 états : la température d'air intérieur `Tair`, 6 températures
 de nœuds du mur (`T1`…`T6`, réseau RC), et 5 énergies cumulées (`Eheat`,
 `Ecool`, `Egrid_cool`, `Eself_cool`, `Eexport`, intégrées uniquement après
