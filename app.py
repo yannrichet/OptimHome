@@ -1,4 +1,4 @@
-"""Confort thermique de bâtiment — simulation Modelica interactive.
+"""Equilibre thermique d'habitation — simulation Modelica interactive.
 
 Fait tourner le modele Modelica compile (binaire BuildingOpt) avec les
 parametres de conception choisis par l'utilisateur (chauffage, froid, PV,
@@ -129,9 +129,9 @@ def prepare_weather(lat: float, lon: float, start_date: date, end_date: date):
     return weather_path, stop_time
 
 
-st.set_page_config(page_title="Confort thermique de bâtiment", layout="wide")
+st.set_page_config(page_title="Equilibre thermique d'habitation", layout="wide")
 
-st.title("Confort thermique de bâtiment")
+st.title("Equilibre thermique d'habitation")
 st.caption(
     "Modele Modelica `BuildingOpt.mo` (mur tricouche ITE/ITI, PV en "
     "autoconsommation). Paramètres de conception, PV, coût €, matériau de mur, "

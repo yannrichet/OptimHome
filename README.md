@@ -1,8 +1,8 @@
-# Confort thermique de bâtiment
+# Equilibre thermique d'habitation
 
 Application web interactive pour explorer le confort thermique et la
 consommation énergétique d'un bâtiment, à partir d'un modèle Modelica
-(`BuildingOpt.mo`) : mur tricouche ITE/ISOLANT/ITE, chauffage/froid,
+(`BuildingTherm.mo`) : mur tricouche ITE/ISOLANT/ITE, chauffage/froid,
 photovoltaïque en autoconsommation, et météo réelle dynamique par
 position/dates.
 
@@ -10,7 +10,7 @@ position/dates.
 
 ## Aperçu
 
-- **Modèle physique** ([`BuildingOpt.mo`](BuildingOpt.mo)) : réseau RC 6 nœuds
+- **Modèle physique** ([`BuildingTherm.mo`](BuildingTherm.mo)) : réseau RC 6 nœuds
   pour un mur tricouche (isolant intérieur / paroi structurelle / isolant
   extérieur), chauffage proportionnel plafonné, PAC de rafraîchissement,
   aération naturelle diurne + surventilation nocturne, PV en
@@ -39,7 +39,7 @@ le `PATH`, en plus de Python 3.10+.
 pip install -r requirements.txt
 ```
 
-Compiler le modèle (à refaire après toute modification de `BuildingOpt.mo`) :
+Compiler le modèle (à refaire après toute modification de `BuildingTherm.mo`) :
 
 ```bash
 omc build.mos
@@ -56,15 +56,15 @@ Ouvre ensuite `http://localhost:8501`.
 ## Architecture
 
 ```
-BuildingOpt.mo         modèle Modelica (source)
-build.mos              script de compilation omc -> binaire BuildingOpt
+BuildingTherm.mo         modèle Modelica (source)
+build.mos              script de compilation omc -> binaire BuildingTherm
 app.py                 app Streamlit (UI, météo, simulation, graphique)
 app_fzr/
   params.txt           template fz minimal (une seule variable : case_id)
   run.sh               calculateur sh:// invoqué par fzr
 ```
 
-La simulation ne modifie pas `BuildingOpt.mo` par run : elle réutilise le
+La simulation ne modifie pas `BuildingTherm.mo` par run : elle réutilise le
 binaire déjà compilé et lui passe les paramètres de conception via
 `-override=...`, ainsi que la plage temporelle via `-startTime`/`-stopTime`.
 
@@ -81,7 +81,7 @@ découlent, gérées dans `app.py`/`app_fzr/run.sh` :
   fichier d'environnement (`/tmp/buildingopt_case_<id>.sh`) que `run.sh` va
   lire.
 - `fzr` exécute chaque cas dans son propre dossier temporaire : `run.sh` copie
-  `BuildingOpt_init.xml`/`BuildingOpt_JacA.bin` avant de lancer le binaire.
+  `BuildingTherm_init.xml`/`BuildingTherm_JacA.bin` avant de lancer le binaire.
 - `fz.fzr()` installe un handler `SIGINT` via `signal.signal()`, valide
   uniquement dans le thread principal — or Streamlit exécute le script dans
   un thread de travail. `app.py` neutralise temporairement `signal.signal()`
