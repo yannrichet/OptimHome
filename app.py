@@ -282,7 +282,7 @@ with page_col_right:
         help="Puissance froid installée (Pcool) de la pompe à chaleur de rafraîchissement, consigne = température confort max.",
     )
     Ppv_kWc = slider_col3.slider(
-        "Photovoltaïque [kWc]", 0.0, 9.0, 3.0, step=0.1,
+        "Photovolt. [kWc]", 0.0, 9.0, 3.0, step=0.1,
         help="Puissance crête du champ photovoltaïque (Ppv_kWc), en autoconsommation directe (chauffage + climatisation).",
     )
     e_ite_cm = slider_col4.slider(
@@ -398,7 +398,7 @@ with page_col_right:
         yaxis=dict(title="Température [°C]"),
         yaxis2=dict(title="Puissance moyenne/j [kW]", overlaying="y", side="right", rangemode="tozero"),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-        height=550,
+        height=400,
         margin=dict(l=60, r=60, t=40, b=50),
         hovermode="x unified",
     )
