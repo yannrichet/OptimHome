@@ -17,12 +17,12 @@ model BuildingOpt
   masques proches, fsol porte le facteur solaire vitrage + occultations.
 
   ============================================================================
-  GEOMETRIE : PARALLELEPIPEDE RECTANGLE, EMPRISE ET HAUTEUR PARAMETRABLES
+  GEOMETRIE : PARALLELEPIPEDE A BASE CARREE, EMPRISE ET HAUTEUR PARAMETRABLES
   ============================================================================
   Deux parametres pilotent toute la geometrie : Sfloor (emprise au sol, m2)
-  et Htot (hauteur totale du batiment, m). V = Sfloor*Htot. Le perimetre de
-  facade est estime en assimilant l'emprise a un CARRE de meme surface
-  (cote = sqrt(Sfloor)) : Awall = 4*sqrt(Sfloor)*Htot - Awin. Cas de
+  et Htot (hauteur totale du batiment, m). V = Sfloor*Htot. L'emprise est un
+  CARRE de surface Sfloor (cote = sqrt(Sfloor)), d'ou le perimetre de facade
+  : Awall = 4*sqrt(Sfloor)*Htot - Awin. Cas de
   reference (defaut) : Sfloor = 40 m2, Htot = 7.5 m (R+2, 3 niveaux de
   2.5 m, soit 120 m2 habitables) -> V = 300 m3, Awall ~ 170 m2, vitrages
   Awin = 20 m2 ; toiture, plancher bas, vitrages (U=1.4) et ponts
@@ -109,9 +109,9 @@ model BuildingOpt
   parameter Real fsol = 0.5 "facteur solaire vitrage x occultations [-]";
   parameter Real seer = 3.5 "SEER de la PAC [-]";
 
-  // ---- Geometrie : parallelepipede rectangle, emprise au sol (Sfloor) et
-  // hauteur totale (Htot) parametrables. Le perimetre de facade est estime
-  // en assimilant l'emprise a un CARRE de meme surface (cote = sqrt(Sfloor)).
+  // ---- Geometrie : parallelepipede a base carree, emprise au sol (Sfloor)
+  // et hauteur totale (Htot) parametrables. L'emprise est un CARRE de
+  // surface Sfloor (cote = sqrt(Sfloor)), d'ou le perimetre de facade.
   parameter Real Sfloor = 40 "surface au sol (emprise) [m2]";
   parameter Real Htot = 7.5 "hauteur totale du batiment [m]";
   parameter Real Awin = 20 "surface vitree totale [m2]";
