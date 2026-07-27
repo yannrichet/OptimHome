@@ -1,5 +1,9 @@
 # Equilibre thermique d'habitation
 
+**App en ligne : [optimhome.streamlit.app](https://optimhome.streamlit.app)**
+(déployée sur Streamlit Community Cloud, solveur Python de secours — voir
+[Solveur de secours Python](#solveur-de-secours-python-buildingthermpy)).
+
 Application web interactive pour explorer le confort thermique et la
 consommation énergétique d'un bâtiment, à partir d'un modèle Modelica
 (`BuildingTherm.mo`) : mur tricouche ITE/ISOLANT/ITE, chauffage/froid,
