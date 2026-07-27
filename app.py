@@ -164,8 +164,10 @@ with page_col_left:
 
         geoloc = streamlit_geolocation()
         if geoloc and geoloc.get("latitude"):
-            st.session_state["lat"] = geoloc["latitude"]
-            st.session_state["lon"] = geoloc["longitude"]
+            geoloc_pos = (geoloc["latitude"], geoloc["longitude"])
+            if geoloc_pos != st.session_state.get("_last_geoloc"):
+                st.session_state["_last_geoloc"] = geoloc_pos
+                st.session_state["lat"], st.session_state["lon"] = geoloc_pos
         st.write(f"**Latitude** : {st.session_state['lat']:.4f} — **Longitude** : {st.session_state['lon']:.4f}")
 
         date_col1, date_col2 = st.columns(2)
