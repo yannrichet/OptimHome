@@ -1,6 +1,6 @@
 """Equilibre thermique d'habitation — simulation Modelica interactive.
 
-Fait tourner le modele Modelica compile (binaire BuildingOpt) avec les
+Fait tourner le modele Modelica compile (binaire BuildingTherm) avec les
 parametres de conception choisis par l'utilisateur (chauffage, froid, PV,
 cout en euro, materiau de mur, geometrie parametrable et localisation/dates
 dynamiques) et affiche le plot temporel correspondant (temperatures +
@@ -133,7 +133,7 @@ st.set_page_config(page_title="Equilibre thermique d'habitation", layout="wide")
 
 st.title("Equilibre thermique d'habitation")
 st.caption(
-    "Modele Modelica `BuildingOpt.mo` (mur tricouche ITE/ITI, PV en "
+    "Modele Modelica `BuildingTherm.mo` (mur tricouche ITE/ITI, PV en "
     "autoconsommation). Paramètres de conception, PV, coût €, matériau de mur, "
     "géométrie et météo réelle (Open-Meteo) dynamique."
 )
@@ -232,7 +232,7 @@ with page_col_left:
     @st.cache_data(show_spinner="Simulation Modelica en cours (fzr)…")
     def run_simulation(params: dict, weather_path: str, stop_time: int) -> pd.DataFrame:
         """Execute le modele via fz.fzr (calculateur sh://app_fzr/run.sh), qui
-        invoque le binaire BuildingOpt compile avec les parametres/meteo/duree
+        invoque le binaire BuildingTherm compile avec les parametres/meteo/duree
         du cas courant. Le cas est identifie par un hash court (case_id) : les
         vraies valeurs (potentiellement longues, avec des '/') transitent par
         un fichier d'environnement plutot que par les variables fz elles-memes,

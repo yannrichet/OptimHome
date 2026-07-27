@@ -1,6 +1,6 @@
 
 
-model BuildingOpt
+model BuildingTherm
   "Maison R+2 (3 x 40 m2) - modele annuel pour optimisation NSGA-II.
 
   ============================================================================
@@ -207,4 +207,4 @@ equation
   der(Eexport) = meas*Pexport/3.6e6;
 
   annotation(experiment(StopTime = 32745600, Tolerance = 1e-6, Interval = 3600));
-end BuildingOpt;
+end BuildingTherm;

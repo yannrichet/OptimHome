@@ -5,6 +5,6 @@ CASE_ID=$(grep '^case_id=' "$PARAMS_FILE" | cut -d= -f2-)
 ENV_FILE="${TMPDIR:-/tmp}/buildingopt_case_${CASE_ID}.sh"
 source "$ENV_FILE"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cp -f "$REPO_DIR/BuildingOpt_init.xml" .
-cp -f "$REPO_DIR/BuildingOpt_JacA.bin" . 2>/dev/null || true
-"$REPO_DIR/BuildingOpt" -override="$OV" -startTime="$STARTT" -stopTime="$STOPT" -stepSize=3600 -r=res.csv > om.log 2>&1
+cp -f "$REPO_DIR/BuildingTherm_init.xml" .
+cp -f "$REPO_DIR/BuildingTherm_JacA.bin" . 2>/dev/null || true
+"$REPO_DIR/BuildingTherm" -override="$OV" -startTime="$STARTT" -stopTime="$STOPT" -stepSize=3600 -r=res.csv > om.log 2>&1
