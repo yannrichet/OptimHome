@@ -187,16 +187,8 @@ with page_col_left:
 
         st.divider()
         st.header("Variables de conception")
-        Pheat = st.slider("Pheat — puissance chauffage [W]", 1000, 12000, 8000, step=100)
-        Pcool = st.slider("Pcool — puissance froid PAC [W]", 0, 6000, 2000, step=50)
         ach_day = st.slider("ach_day — aération naturelle diurne [vol/h]", 0.5, 4.0, 1.5, step=0.1)
         ach_night = st.slider("ach_night — surventilation nocturne électrique [vol/h]", 0.0, 6.0, 2.0, step=0.1)
-        e_ite_cm = st.slider("e_ite — isolant extérieur [cm]", 0.0, 30.0, 16.0, step=0.5)
-        e_iti_cm = st.slider("e_iti — isolant intérieur [cm]", 0.0, 20.0, 0.0, step=0.5)
-
-        st.divider()
-        st.header("Photovoltaïque")
-        Ppv_kWc = st.slider("Puissance crête PV [kWc]", 0.0, 9.0, 3.0, step=0.1)
 
         st.divider()
         st.header("Géométrie (parallélépipède, emprise ≈ carré)")
@@ -280,6 +272,13 @@ with page_col_left:
 
 with page_col_right:
 
+    slider_col1, slider_col2, slider_col3, slider_col4, slider_col5 = st.columns(5)
+    Pheat = slider_col1.slider("Pheat — chauffage [W]", 1000, 12000, 8000, step=100)
+    Pcool = slider_col2.slider("Pcool — froid PAC [W]", 0, 6000, 2000, step=50)
+    Ppv_kWc = slider_col3.slider("PV crête [kWc]", 0.0, 9.0, 3.0, step=0.1)
+    e_ite_cm = slider_col4.slider("e_ite — ITE [cm]", 0.0, 30.0, 16.0, step=0.5)
+    e_iti_cm = slider_col5.slider("e_iti — ITI [cm]", 0.0, 20.0, 0.0, step=0.5)
+
     params = {
         "Pheat": Pheat, "Pcool": Pcool, "ach_day": ach_day, "ach_night": ach_night,
         "e_ite": e_ite_cm / 100.0, "e_iti": e_iti_cm / 100.0,
@@ -331,21 +330,8 @@ with page_col_right:
     Conso_nette = Egrid_cool  # deja net de l'autoconso PV (chauffage compris)
     Cout_net_eur = Conso_nette * prix_elec - Eexport * prix_rachat_pv
 
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("T min période", f"{Tmin_hiver:.1f} °C")
-    c2.metric("T max période", f"{Tmax_ete:.1f} °C")
-    c3.metric("Conso nette (chauf.+froid après PV)", f"{Conso_nette:.0f} {periode_label}")
-    c4.metric("Autoconso PV (chauf.+froid)", f"{Eself_cool:.0f} {periode_label}")
-    c5.metric("Coût net (période)", f"{Cout_net_eur:.0f} €")
-
     Text_min_period = sim_p["Tout"].min() - 273.15
     Text_max_period = sim_p["Tout"].max() - 273.15
-
-    if Tmin_hiver < T_confort_min or Tmax_ete > T_confort_max:
-        st.warning(
-            f"Hors bande de confort [{T_confort_min:.0f}–{T_confort_max:.0f} °C] : "
-            f"Tmin={Tmin_hiver:.1f} °C, Tmax={Tmax_ete:.1f} °C."
-        )
 
     # ---------------------------------------------------------------------------
     # Plot temporel Plotly (bande de confort + bandes min-max de temperature +
@@ -403,3 +389,16 @@ with page_col_right:
     )
 
     st.plotly_chart(fig, use_container_width=True)
+
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.metric("T min période", f"{Tmin_hiver:.1f} °C")
+    c2.metric("T max période", f"{Tmax_ete:.1f} °C")
+    c3.metric("Conso nette (chauf.+froid après PV)", f"{Conso_nette:.0f} {periode_label}")
+    c4.metric("Autoconso PV (chauf.+froid)", f"{Eself_cool:.0f} {periode_label}")
+    c5.metric("Coût net (période)", f"{Cout_net_eur:.0f} €")
+
+    if Tmin_hiver < T_confort_min or Tmax_ete > T_confort_max:
+        st.warning(
+            f"Hors bande de confort [{T_confort_min:.0f}–{T_confort_max:.0f} °C] : "
+            f"Tmin={Tmin_hiver:.1f} °C, Tmax={Tmax_ete:.1f} °C."
+        )
