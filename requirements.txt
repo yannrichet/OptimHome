@@ -1,5 +1,5 @@
 streamlit
-fz
+funz-fz
 pandas
 plotly
 requests
