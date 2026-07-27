@@ -337,7 +337,6 @@ with page_col_right:
     # Indicateurs sur la periode choisie + coût en euros
     # ---------------------------------------------------------------------------
     n_days = (date_end - date_start).days + 1
-    periode_label = "kWh/an" if 360 <= n_days <= 370 else f"kWh/{n_days}j"
 
     Tmin_hiver = sim_p["Tair"].min() - 273.15
     Tmax_ete = sim_p["Tair"].max() - 273.15
@@ -420,14 +419,14 @@ with page_col_right:
         help="Température intérieure maximale atteinte sur la période choisie (après mise en régime de 14 j).",
     )
     c3.metric(
-        f"Conso nette [{periode_label}]", f"{Conso_nette:.0f}",
-        help="Électricité importée du réseau pour le chauffage et le rafraîchissement, après déduction de l'autoconsommation PV.",
+        "Conso nette [kWh]", f"{Conso_nette:.0f}",
+        help=f"Électricité importée du réseau pour le chauffage et le rafraîchissement sur les {n_days} j de la période choisie, après déduction de l'autoconsommation PV.",
     )
     c4.metric(
-        f"Autoconso [{periode_label}]", f"{Eself_cool:.0f}",
-        help="Production photovoltaïque consommée directement sur place pour le chauffage et le rafraîchissement (sans passer par le réseau).",
+        "Autoconso [kWh]", f"{Eself_cool:.0f}",
+        help=f"Production photovoltaïque consommée directement sur place pour le chauffage et le rafraîchissement sur les {n_days} j de la période choisie (sans passer par le réseau).",
     )
     c5.metric(
         "Coût [€]", f"{Cout_net_eur:.0f}",
-        help="Coût net sur la période : conso nette valorisée au prix de l'électricité, moins le surplus PV exporté valorisé au tarif de rachat.",
+        help="Coût net sur la période : conso nette valorisée au prix de l'électricité, moins le surplus PV exporté valorisé au tarif de rachat. Hors CAPEX (investissement chauffage/PAC/PV/isolation non inclus).",
     )
