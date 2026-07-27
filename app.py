@@ -273,11 +273,26 @@ with page_col_left:
 with page_col_right:
 
     slider_col1, slider_col2, slider_col3, slider_col4, slider_col5 = st.columns(5)
-    Pheat = slider_col1.slider("Pheat — chauffage [W]", 1000, 12000, 8000, step=100)
-    Pcool = slider_col2.slider("Pcool — froid PAC [W]", 0, 6000, 2000, step=50)
-    Ppv_kWc = slider_col3.slider("PV crête [kWc]", 0.0, 9.0, 3.0, step=0.1)
-    e_ite_cm = slider_col4.slider("e_ite — ITE [cm]", 0.0, 30.0, 16.0, step=0.5)
-    e_iti_cm = slider_col5.slider("e_iti — ITI [cm]", 0.0, 20.0, 0.0, step=0.5)
+    Pheat = slider_col1.slider(
+        "Chauffage [W]", 1000, 12000, 8000, step=100,
+        help="Puissance de chauffage installée (Pheat), résistif électrique, consigne = température confort min.",
+    )
+    Pcool = slider_col2.slider(
+        "Climatisation [W]", 0, 6000, 2000, step=50,
+        help="Puissance froid installée (Pcool) de la pompe à chaleur de rafraîchissement, consigne = température confort max.",
+    )
+    Ppv_kWc = slider_col3.slider(
+        "Photovoltaïque [kWc]", 0.0, 9.0, 3.0, step=0.1,
+        help="Puissance crête du champ photovoltaïque (Ppv_kWc), en autoconsommation directe (chauffage + climatisation).",
+    )
+    e_ite_cm = slider_col4.slider(
+        "Isolation ext. [cm]", 0.0, 30.0, 16.0, step=0.5,
+        help="Épaisseur de l'isolant thermique par l'extérieur (e_ite, ITE), posé côté extérieur du mur structurel.",
+    )
+    e_iti_cm = slider_col5.slider(
+        "Isolation int. [cm]", 0.0, 20.0, 0.0, step=0.5,
+        help="Épaisseur de l'isolant thermique par l'intérieur (e_iti, ITI), posé côté intérieur du mur structurel.",
+    )
 
     params = {
         "Pheat": Pheat, "Pcool": Pcool, "ach_day": ach_day, "ach_night": ach_night,
@@ -390,9 +405,27 @@ with page_col_right:
 
     st.plotly_chart(fig, use_container_width=True)
 
+    # ---------------------------------------------------------------------------
+    # Resultats de simulation, sous le graphique
+    # ---------------------------------------------------------------------------
     c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("T min période", f"{Tmin_hiver:.1f} °C")
-    c2.metric("T max période", f"{Tmax_ete:.1f} °C")
-    c3.metric("Conso nette (chauf.+froid après PV)", f"{Conso_nette:.0f} {periode_label}")
-    c4.metric("Autoconso PV (chauf.+froid)", f"{Eself_cool:.0f} {periode_label}")
-    c5.metric("Coût net (période)", f"{Cout_net_eur:.0f} €")
+    c1.metric(
+        "Temp min. [°C]", f"{Tmin_hiver:.1f}",
+        help="Température intérieure minimale atteinte sur la période choisie (après mise en régime de 14 j).",
+    )
+    c2.metric(
+        "Temp max. [°C]", f"{Tmax_ete:.1f}",
+        help="Température intérieure maximale atteinte sur la période choisie (après mise en régime de 14 j).",
+    )
+    c3.metric(
+        f"Conso nette [{periode_label}]", f"{Conso_nette:.0f}",
+        help="Électricité importée du réseau pour le chauffage et le rafraîchissement, après déduction de l'autoconsommation PV.",
+    )
+    c4.metric(
+        f"Autoconso [{periode_label}]", f"{Eself_cool:.0f}",
+        help="Production photovoltaïque consommée directement sur place pour le chauffage et le rafraîchissement (sans passer par le réseau).",
+    )
+    c5.metric(
+        "Coût [€]", f"{Cout_net_eur:.0f}",
+        help="Coût net sur la période : conso nette valorisée au prix de l'électricité, moins le surplus PV exporté valorisé au tarif de rachat.",
+    )
