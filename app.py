@@ -15,7 +15,6 @@ donnees reelles (aucune prevision) de 1950 jusqu'a la date du jour.
 Lancer avec : streamlit run app.py
 """
 import hashlib
-import math
 import os
 import signal
 import tempfile
@@ -67,7 +66,7 @@ def _fzr_outside_main_thread():
     finally:
         signal.signal = original_signal
 
-ORLY_LAT, ORLY_LON = 48.723, 2.379
+DEFAULT_LAT, DEFAULT_LON = 48.8566, 2.3522
 OPEN_METEO_URL = "https://archive-api.open-meteo.com/v1/archive"
 DATE_UI_MIN = date(1950, 1, 15)
 DATE_UI_MAX = date.today()  # aucune prevision : donnees reelles uniquement, jusqu'a aujourd'hui
@@ -82,14 +81,6 @@ MATERIAUX = {
     "Meulière (pierre, Île-de-France)": dict(lam=1.70, rhoc=2200 * 1000, e=0.45),
     "Moellon (pierre calcaire appareillée)": dict(lam=1.40, rhoc=2000 * 1000, e=0.40),
 }
-
-
-def haversine_km(lat1, lon1, lat2, lon2):
-    r = 6371.0
-    p1, p2 = math.radians(lat1), math.radians(lat2)
-    dp, dl = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
-    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
-    return 2 * r * math.asin(math.sqrt(a))
 
 
 @st.cache_data(show_spinner=False)
@@ -148,8 +139,8 @@ st.caption(
 )
 
 if "lat" not in st.session_state:
-    st.session_state["lat"] = ORLY_LAT
-    st.session_state["lon"] = ORLY_LON
+    st.session_state["lat"] = DEFAULT_LAT
+    st.session_state["lon"] = DEFAULT_LON
 
 page_col_left, page_col_right = st.columns([1, 2])
 
@@ -176,8 +167,6 @@ with page_col_left:
             st.session_state["lat"] = geoloc["latitude"]
             st.session_state["lon"] = geoloc["longitude"]
         st.write(f"**Latitude** : {st.session_state['lat']:.4f} — **Longitude** : {st.session_state['lon']:.4f}")
-        dist_orly = haversine_km(st.session_state["lat"], st.session_state["lon"], ORLY_LAT, ORLY_LON)
-        st.caption(f"Distance à Orly (référence historique du modèle) : {dist_orly:.0f} km")
 
         date_col1, date_col2 = st.columns(2)
         date_start = date_col1.date_input(
