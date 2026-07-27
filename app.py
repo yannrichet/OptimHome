@@ -130,10 +130,16 @@ def prepare_weather(lat: float, lon: float, start_date: date, end_date: date):
     return weather_path, stop_time
 
 
-st.set_page_config(page_title="Equilibre thermique d'habitation", layout="wide")
+st.set_page_config(
+    page_title="Equilibre thermique d'habitation", layout="wide",
+    menu_items={
+        "Get help": "https://github.com/yannrichet/OptimHome",
+        "Report a bug": "https://github.com/yannrichet/OptimHome/issues",
+        "About": "Code source : https://github.com/yannrichet/OptimHome",
+    },
+)
 
 st.title("Equilibre thermique d'habitation")
-st.caption("[Code source sur GitHub](https://github.com/yannrichet/OptimHome)")
 solver_badge = st.empty()
 
 if "lat" not in st.session_state:
