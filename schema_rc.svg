@@ -29,18 +29,18 @@
   </defs>
 
   <text x="20" y="26" class="title">Maillage RC du mur tricouche (BuildingTherm.mo / BuildingTherm.py)</text>
-  <text x="20" y="46" font-size="14" fill="#444">Intérieur (Tair) → extérieur (Tout). Repères ①…⑭ : détail dans la légende en bas (orangé = variable de conception fz/NSGA-II).</text>
+  <text x="20" y="46" font-size="14" fill="#444">Intérieur (Tair) → extérieur (Tout). Repères ①…⑭ : détail dans la légende en bas (orangé = curseur de l'app).</text>
 
   <!-- ===================== Layer bands ===================== -->
   <!-- ISOLANT INT : T1..T2 -->
   <rect x="255" y="140" width="200" height="320" class="band" fill="#8ecae6"/>
-  <text x="355" y="130" class="bandlabel">ISOLANT INTÉRIEUR</text>
+  <text x="355" y="130" class="bandlabel">ISOLATION INT. (ITI)</text>
   <!-- PARPAING : T3..T4 core -->
   <rect x="555" y="140" width="200" height="320" class="band" fill="#adb5bd"/>
   <text x="655" y="130" class="bandlabel">PARPAING (structure)</text>
   <!-- ISOLANT EXT : T5..T6 -->
   <rect x="855" y="140" width="200" height="320" class="band" fill="#8ecae6"/>
-  <text x="955" y="130" class="bandlabel">ISOLANT EXTÉRIEUR</text>
+  <text x="955" y="130" class="bandlabel">ISOLATION EXT. (ITE)</text>
 
   <!-- ===================== Main RC chain ===================== -->
   <!-- y=300 main line -->
@@ -107,7 +107,7 @@
   <line x1="260" y1="430" x2="1050" y2="430" class="wire"/>
   <text x="620" y="452" class="clabel">masse thermique des nœuds (C1…C6) — référence de dérivation, pas un vrai potentiel</text>
   <circle cx="1110" cy="452" r="13" class="tag"/><text x="1110" y="457" class="taglabel">⑬</text>
-  <text x="1130" y="457" class="clabel" text-anchor="start">Awall (surface commune)</text>
+  <text x="1130" y="457" class="clabel" style="text-anchor:start">Awall (surface commune)</text>
 
   <text x="305" y="422" class="clabel" dy="-2">C1</text>
   <text x="405" y="422" class="clabel" dy="-2">C2</text>
@@ -126,7 +126,7 @@
 
   <!-- ===================== Heat inputs into Tair (top), fan-in to the same point ===================== -->
   <path d="M30,120 L160,266" class="flowarrow"/>
-  <text x="30" y="108" class="rlabel" fill="#a01414" text-anchor="start">Qheat (+)</text>
+  <text x="30" y="108" class="rlabel" fill="#a01414" style="text-anchor:start">Chauffage</text>
   <circle cx="55" cy="175" r="13" class="tag"/><text x="55" y="180" class="taglabel">①</text>
 
   <path d="M110,110 L160,266" class="flowarrow"/>
@@ -138,7 +138,7 @@
   <circle cx="197" cy="165" r="13" class="tag"/><text x="197" y="170" class="taglabel">④</text>
 
   <path d="M280,120 L160,266" class="flowarrow"/>
-  <text x="280" y="108" class="rlabel" fill="#a01414" text-anchor="end">−Qcool</text>
+  <text x="280" y="108" class="rlabel" fill="#a01414" style="text-anchor:end">Climatisation</text>
   <circle cx="262" cy="175" r="13" class="tag"/><text x="262" y="180" class="taglabel">②</text>
 
   <!-- ===================== Ventilation / UAother bypass arc: Tout -> Tair directly ===================== -->
@@ -164,7 +164,7 @@
 
   <!-- ===================== PV / electrical sub-diagram ===================== -->
   <rect x="1100" y="520" width="260" height="150" rx="10" fill="#fff7e6" stroke="#8a5a00" stroke-width="1.5"/>
-  <text x="1230" y="545" class="bandlabel" fill="#8a5a00">PV autoconsommation</text>
+  <text x="1230" y="545" class="bandlabel" fill="#8a5a00">Photovolt. — autoconsommation</text>
   <text x="1230" y="568" font-size="13" text-anchor="middle">Pelec = Qheat + Qcool/seer + vent.</text>
   <text x="1230" y="588" font-size="13" text-anchor="middle">Ppv = f(Ppv_kWc, PR_pv, G(h))</text>
   <text x="1230" y="608" font-size="13" text-anchor="middle">Pgrid_cool = max(Pelec−Ppv,0)</text>
@@ -177,10 +177,10 @@
   <text x="35" y="725" font-size="16" font-weight="bold" fill="#111">Légende — variables de paramétrage associées à chaque repère</text>
 
   <text x="35" y="752" class="legendnum">①</text>
-  <text x="60" y="752" class="legend">Qheat = clip(Kp·(Tset_h−Tair), 0, Pheat) — <tspan fill="#8a5a00" font-weight="bold">Pheat</tspan> (variable de conception), Tset_h, Kp</text>
+  <text x="60" y="752" class="legend">Qheat = clip(Kp·(Tset_h−Tair), 0, Pheat) — <tspan fill="#8a5a00" font-weight="bold">Chauffage</tspan> (Pheat), Tset_h, Kp</text>
 
   <text x="35" y="774" class="legendnum">②</text>
-  <text x="60" y="774" class="legend">Qcool = clip(Kc·(Tair−Tset_c), 0, Pcool) — <tspan fill="#8a5a00" font-weight="bold">Pcool</tspan> (variable de conception), Tset_c, Kc</text>
+  <text x="60" y="774" class="legend">Qcool = clip(Kc·(Tair−Tset_c), 0, Pcool) — <tspan fill="#8a5a00" font-weight="bold">Climatisation</tspan> (Pcool), Tset_c, Kc</text>
 
   <text x="35" y="796" class="legendnum">③</text>
   <text x="60" y="796" class="legend">Apports internes fixes — Qint</text>
@@ -189,19 +189,19 @@
   <text x="60" y="818" class="legend">Qsol = fsol·0,5·Awin·G(h) — Awin, fsol, météo G(h) (Open-Meteo)</text>
 
   <text x="35" y="840" class="legendnum">⑤</text>
-  <text x="60" y="840" class="legend">UAv = (ach+boostN+vopen)·V·0,34 — <tspan fill="#8a5a00" font-weight="bold">ach_day, ach_night</tspan> (conception), ach, fanWhm3 ; UAother = f(UAother_ref, Sfloor, Sfloor_ref)</text>
+  <text x="60" y="840" class="legend">UAv = (ach+boostN+vopen)·V·0,34 — ach_day, ach_night, ach, fanWhm3 ; UAother = f(UAother_ref, Sfloor, Sfloor_ref)</text>
 
   <text x="35" y="862" class="legendnum">⑥⑩</text>
   <text x="70" y="862" class="legend">Rsi = 1/(hi·Awall)+Riti/4 ; R6e = Rite/4+1/(he·Awall) — coefficients d'échange hi (intérieur), he (extérieur)</text>
 
   <text x="35" y="884" class="legendnum">⑦</text>
-  <text x="60" y="884" class="legend">Isolant intérieur (R12, C1, C2) — <tspan fill="#8a5a00" font-weight="bold">e_iti</tspan> (conception), lam_iso, rhoc_iso</text>
+  <text x="60" y="884" class="legend">Isolant intérieur (R12, C1, C2) — <tspan fill="#8a5a00" font-weight="bold">Isolation int.</tspan> (e_iti), lam_iso, rhoc_iso</text>
 
   <text x="35" y="906" class="legendnum">⑧</text>
   <text x="60" y="906" class="legend">Parpaing (R23, R34, R45, C3, C4) — e_blk, lam_blk, rhoc_blk (matériau du mur, choisi dans l'app)</text>
 
   <text x="35" y="928" class="legendnum">⑨</text>
-  <text x="60" y="928" class="legend">Isolant extérieur (R56, C5, C6) — <tspan fill="#8a5a00" font-weight="bold">e_ite</tspan> (conception), lam_iso, rhoc_iso</text>
+  <text x="60" y="928" class="legend">Isolant extérieur (R56, C5, C6) — <tspan fill="#8a5a00" font-weight="bold">Isolation ext.</tspan> (e_ite), lam_iso, rhoc_iso</text>
 
   <text x="720" y="752" class="legendnum">⑪</text>
   <text x="745" y="752" class="legend">Tout = T2m(Open-Meteo) + dTout — décalage climatique</text>
@@ -213,9 +213,10 @@
   <text x="745" y="796" class="legend">Awall = max(4·√Sfloor·Htot−Awin, 1) — Sfloor, Htot, Awin (géométrie à base carrée)</text>
 
   <text x="720" y="818" class="legendnum">⑭</text>
-  <text x="745" y="818" class="legend">Ppv_kWc (puissance crête PV, fixe), PR_pv (ratio de performance), seer (SEER de la PAC de froid)</text>
+  <text x="745" y="818" class="legend"><tspan fill="#8a5a00" font-weight="bold">Photovolt.</tspan> (Ppv_kWc, puissance crête), PR_pv (ratio de performance), seer (SEER de la PAC de froid)</text>
 
   <text x="720" y="850" class="legend" font-style="italic">États intégrés (12) : Tair, T1…T6, et 5 énergies cumulées Eheat/Ecool/Egrid_cool/Eself_cool/Eexport</text>
   <text x="720" y="872" class="legend" font-style="italic">(intégrées seulement après 14 j de mise en régime — cf. section "Équations résolues").</text>
-  <text x="720" y="900" class="legend" font-weight="bold">En gras/orangé : les 6 variables de conception pilotées par l'optimiseur (fz/NSGA-II).</text>
+  <text x="720" y="900" class="legend" font-weight="bold">Orangé/gras : les 5 curseurs de l'app (Chauffage, Climatisation,</text>
+  <text x="720" y="920" class="legend" font-weight="bold">Photovolt., Isolation ext./int.).</text>
 </svg>
