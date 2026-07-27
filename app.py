@@ -289,7 +289,13 @@ with page_col_left:
         """Essaie OpenModelica/fzr en premier ; si le binaire compile ou la
         chaine fzr n'est pas disponible (poste sans OpenModelica installe,
         binaire non recompile, etc.), bascule automatiquement sur le solveur
-        pure Python (BuildingTherm.py) plutot que de planter l'app."""
+        pure Python (BuildingTherm.py) plutot que de planter l'app. Le binaire
+        compile n'est pas versionne (cf. .gitignore) : sur un deploiement
+        (Streamlit Community Cloud par ex.) il est absent par construction,
+        donc on saute directement au solveur Python plutot que de perdre du
+        temps a laisser fzr echouer plusieurs fois pour rien."""
+        if not os.path.isfile(os.path.join(WORK, "BuildingTherm")):
+            return _run_simulation_python(params, weather_path, stop_time), "Python (secours)"
         try:
             return _run_simulation_openmodelica(params, weather_path, stop_time), "OpenModelica"
         except Exception as om_error:
