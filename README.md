@@ -207,6 +207,37 @@ quantités dérivées des paramètres de conception — voir
 `derive_constants()` dans `BuildingTherm.py` (ou le bloc `parameter Real ...`
 dans `BuildingTherm.mo`) pour le détail des formules.
 
+## Notebook d'optimisation multi-objectif (NSGA-II)
+
+[![Ouvrir dans Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/yannrichet/OptimHome/blob/main/BuildingOpt.ipynb)
+
+[`BuildingOpt.ipynb`](BuildingOpt.ipynb) est une reproduction
+**simplifiée** du notebook d'optimisation multi-objectif mentionné en
+commentaire dans `BuildingTherm.mo`. Il est autonome (aucun clone du dépôt
+nécessaire, tout tourne sur Colab via le badge ci-dessus) et reste cohérent
+avec l'app :
+
+- **même solveur** que le mode de secours de l'app —
+  [`BuildingTherm.py`](BuildingTherm.py), téléchargé automatiquement depuis
+  GitHub si absent (pas besoin d'OpenModelica) ;
+- **mêmes variables d'entrée** que les 5 curseurs mis en avant dans l'app
+  (Chauffage, Climatisation, Photovolt., Isolation ext., Isolation int.) et
+  **mêmes sorties** (température min/max, conso nette, autoconsommation,
+  coût €) ;
+- lance **NSGA-II** ([`pymoo`](https://pymoo.org/)) pour explorer le
+  compromis coût ↔ confort thermique sur une année de météo réelle
+  (Open-Meteo) ;
+- **regroupe** (k-means, `scikit-learn`) le front de Pareto obtenu en **N
+  scénarios représentatifs** (5 par défaut, réglable) et affiche pour
+  chacun le même graphique temporel que l'app (bande de confort,
+  températures intérieure/extérieure, puissances importées/autoconsommées).
+
+Avec les réglages par défaut (population 16, 6 générations), compter
+quelques minutes d'exécution (chaque simulation annuelle en pur Python
+prend ~4-5 s). Ces deux valeurs sont réglables en tête de la section
+optimisation du notebook pour un front de Pareto plus fin (au prix du
+temps de calcul).
+
 ## Limites connues
 
 - Météo réelle uniquement : pas de prévision, dates bornées à aujourd'hui.
