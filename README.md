@@ -222,11 +222,11 @@ avec l'app :
   GitHub si absent (pas besoin d'OpenModelica) ;
 - **mêmes variables d'entrée** que les 5 curseurs mis en avant dans l'app
   (Chauffage, Climatisation, Photovolt., Isolation ext., Isolation int.) et
-  **mêmes sorties** (température min/max, conso nette, autoconsommation,
-  coût €) ;
-- lance **NSGA-II** ([`pymoo`](https://pymoo.org/)) pour explorer le
-  compromis coût ↔ confort thermique sur une année de météo réelle
-  (Open-Meteo) ;
+  **3 mêmes sorties/objectifs** que l'app (température min., température
+  max., coût net €) ;
+- lance **NSGA-II** ([`pymoo`](https://pymoo.org/)) à 3 objectifs pour
+  explorer le compromis confort d'hiver ↔ confort d'été ↔ coût, sur une
+  année de météo réelle (Open-Meteo) ;
 - **regroupe** (k-means, `scikit-learn`) le front de Pareto obtenu en **N
   scénarios représentatifs** (5 par défaut, réglable) et affiche pour
   chacun le même graphique temporel que l'app (bande de confort,
