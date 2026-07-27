@@ -1,17 +1,18 @@
 
 
 model BuildingOpt
-  "Maison R+2 (3 x 40 m2) a Fresnes (94) - modele annuel pour optimisation NSGA-II.
+  "Maison R+2 (3 x 40 m2) - modele annuel pour optimisation NSGA-II.
 
   ============================================================================
-  METEO REELLE (TMY ORLY) — cf. section 2 du notebook
+  METEO REELLE (TMY) — cf. section 2 du notebook
   ============================================================================
-  Fichier weather_orly.txt : table 8761 x 3 = [temps s ; T2m K ; G(h) W/m2],
+  Fichier weather.txt : table 8761 x 3 = [temps s ; T2m K ; G(h) W/m2],
   pas horaire, lue par CombiTimeTable (interpolation lineaire, extrapolation
-  PERIODIQUE pour la mise en regime au-dela d'un an). Source PVGIS v5.2,
-  point 48.723 N / 2.379 E (Orly, alt. 92 m). dTout [K] est un decalage
-  climatique uniforme (variabilite interannuelle + ilot de chaleur ; fixe a
-  +1 K dans cette optimisation deterministe, cf. section 6 du notebook).
+  PERIODIQUE pour la mise en regime au-dela d'un an). Source PVGIS v5.2 (ou
+  equivalent), pour le point geographique (lat/lon, altitude) choisi par
+  l'utilisateur. dTout [K] est un decalage climatique uniforme (variabilite
+  interannuelle + ilot de chaleur ; fixe a +1 K dans cette optimisation
+  deterministe, cf. section 6 du notebook).
   Apports solaires interieurs : Qsol = fsol * 0.5 * Awin * G(h) — G(h) est
   horizontal, 0.5 projette sur des baies verticales multi-orientees avec
   masques proches, fsol porte le facteur solaire vitrage + occultations.
@@ -50,17 +51,17 @@ model BuildingOpt
   L'utilisateur dispose d'un actif fixe : Ppv_kWc = 3 kWc de panneaux, non
   redimensionnes par l'optimiseur (ce n'est pas une variable de conception).
   Production : Ppv(t) = Ppv_kWc*1000 * (G(h,t)/1000) * PR, ou G(h,t) est
-  l'irradiance globale HORIZONTALE du meme TMY Orly (reutilisee telle quelle,
-  cf. section meteo). PR = 0.90 est un ratio de performance GLOBAL qui
-  regroupe en un seul coefficient : (a) le gain d'un panneau incline plein
-  sud (~30-35°, typique en toiture) par rapport a l'irradiance horizontale
-  utilisee ici par simplicite, et (b) les pertes systeme habituelles
-  (onduleur, temperature, salissure, cablage). Calibrage : avec PR=0.90 et
-  l'irradiance horizontale annuelle du TMY (~1176 kWh/m2/an), la production
-  obtenue est d'environ 1060 kWh/kWc/an — coherent avec les estimations
-  PVGIS pour un plein sud incline optimal en region parisienne (typiquement
-  1050-1150 kWh/kWc/an). C'est une approximation documentee, pas une
-  simulation d'inclinaison/orientation detaillee.
+  l'irradiance globale HORIZONTALE du meme fichier TMY (reutilisee telle
+  quelle, cf. section meteo). PR = 0.90 est un ratio de performance GLOBAL
+  qui regroupe en un seul coefficient : (a) le gain d'un panneau incline
+  plein sud (~30-35°, typique en toiture) par rapport a l'irradiance
+  horizontale utilisee ici par simplicite, et (b) les pertes systeme
+  habituelles (onduleur, temperature, salissure, cablage). Calibrage : la
+  production annuelle obtenue (kWh/kWc/an) vaut approximativement
+  PR*irradiation_horizontale_annuelle_du_TMY (kWh/m2/an) ; a comparer aux
+  estimations PVGIS pour un plein sud incline optimal au point geographique
+  considere. C'est une approximation documentee, pas une simulation
+  d'inclinaison/orientation detaillee.
 
   AUTOCONSOMMATION : le productible sert en PRIORITE la charge electrique
   TOTALE, chauffage compris. Pelec = Qheat (chauffage, hypothese resistif
@@ -149,7 +150,7 @@ model BuildingOpt
 
   // ---- Meteo ----
   Modelica.Blocks.Sources.CombiTimeTable tmy(
-    tableOnFile = true, tableName = "tmy", fileName = "weather_orly.txt",
+    tableOnFile = true, tableName = "tmy", fileName = "weather.txt",
     columns = {2, 3},
     smoothness = Modelica.Blocks.Types.Smoothness.LinearSegments,
     extrapolation = Modelica.Blocks.Types.Extrapolation.Periodic);
