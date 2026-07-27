@@ -21,6 +21,8 @@ __pycache__/
 /params.txt
 /params_robust.txt
 weather.txt
+weather_nb.txt
+build_nb.mos
 
 # Generated data / plots / logs (reproducible via the notebook or app)
 *.csv
