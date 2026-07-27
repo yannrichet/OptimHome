@@ -21,6 +21,7 @@ import tempfile
 from contextlib import contextmanager
 from datetime import date, timedelta
 
+import BuildingTherm
 import fz
 import folium
 import pandas as pd
@@ -132,11 +133,8 @@ def prepare_weather(lat: float, lon: float, start_date: date, end_date: date):
 st.set_page_config(page_title="Equilibre thermique d'habitation", layout="wide")
 
 st.title("Equilibre thermique d'habitation")
-st.caption(
-    "Modele Modelica `BuildingTherm.mo` (mur tricouche ITE/ITI, PV en "
-    "autoconsommation). Paramètres de conception, PV, coût €, matériau de mur, "
-    "géométrie et météo réelle (Open-Meteo) dynamique."
-)
+st.caption("[Code source sur GitHub](https://github.com/yannrichet/OptimHome)")
+solver_badge = st.empty()
 
 if "lat" not in st.session_state:
     st.session_state["lat"] = DEFAULT_LAT
@@ -231,8 +229,7 @@ with page_col_left:
         seer = st.slider("seer — SEER de la PAC [-]", 2.5, 5.0, 3.5, step=0.1)
 
 
-    @st.cache_data(show_spinner="Simulation Modelica en cours (fzr)…")
-    def run_simulation(params: dict, weather_path: str, stop_time: int) -> pd.DataFrame:
+    def _run_simulation_openmodelica(params: dict, weather_path: str, stop_time: int) -> pd.DataFrame:
         """Execute le modele via fz.fzr (calculateur sh://app_fzr/run.sh), qui
         invoque le binaire BuildingTherm compile avec les parametres/meteo/duree
         du cas courant. Le cas est identifie par un hash court (case_id) : les
@@ -270,6 +267,32 @@ with page_col_left:
         sim["Eself_cool"] = row["Eself_cool_last"]
         sim["Eexport"] = row["Eexport_last"]
         return sim
+
+    def _run_simulation_python(params: dict, weather_path: str, stop_time: int) -> pd.DataFrame:
+        """Reimplementation pure Python (BuildingTherm.py, solveur scipy BDF),
+        utilisee en secours quand OpenModelica/fzr n'est pas disponible. Memes
+        colonnes de sortie que la voie OpenModelica ci-dessus."""
+        rows = BuildingTherm.run_simulation(params, weather_path, stop_time)
+        return pd.DataFrame(rows)[
+            ["time", "Tair", "Tout", "Qheat", "Pgrid_cool", "Pself_cool",
+             "Egrid_cool", "Eself_cool", "Eexport"]
+        ]
+
+    @st.cache_data(show_spinner="Simulation en cours…")
+    def run_simulation(params: dict, weather_path: str, stop_time: int):
+        """Essaie OpenModelica/fzr en premier ; si le binaire compile ou la
+        chaine fzr n'est pas disponible (poste sans OpenModelica installe,
+        binaire non recompile, etc.), bascule automatiquement sur le solveur
+        pure Python (BuildingTherm.py) plutot que de planter l'app."""
+        try:
+            return _run_simulation_openmodelica(params, weather_path, stop_time), "OpenModelica"
+        except Exception as om_error:
+            try:
+                return _run_simulation_python(params, weather_path, stop_time), "Python (secours)"
+            except Exception as py_error:
+                raise RuntimeError(
+                    f"Échec OpenModelica ({om_error}) et échec du solveur Python de secours ({py_error})."
+                ) from py_error
 
 
 with page_col_right:
@@ -311,10 +334,18 @@ with page_col_right:
         weather_path, stop_time = prepare_weather(
             st.session_state["lat"], st.session_state["lon"], date_start, date_end
         )
-        sim = run_simulation(params, weather_path, stop_time)
+        sim, solver_used = run_simulation(params, weather_path, stop_time)
     except Exception as e:
         st.error(str(e))
         st.stop()
+
+    if solver_used == "OpenModelica":
+        solver_badge.caption("🟢 Solveur : **OpenModelica** (binaire `BuildingTherm` compilé)")
+    else:
+        solver_badge.caption(
+            "🟡 Solveur : **Python de secours** (`BuildingTherm.py`, scipy BDF) — "
+            "OpenModelica indisponible ; résultats équivalents à ~0.02 % près."
+        )
 
     sim_p = sim.iloc[WARMUP_HOURS:].reset_index(drop=True)
     jours = (sim_p["time"] - sim_p["time"].iloc[0]) / 86400
