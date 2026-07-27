@@ -13,6 +13,7 @@ BuildingTherm.makefile
 # fz cache / run artifacts
 .fz/
 __pycache__/
+.ipynb_checkpoints/
 
 # Notebook working-directory artifacts (this app doesn't use them: it calls
 # app_fzr/ and downloads weather dynamically instead of weather.txt)
