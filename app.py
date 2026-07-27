@@ -396,9 +396,3 @@ with page_col_right:
     c3.metric("Conso nette (chauf.+froid après PV)", f"{Conso_nette:.0f} {periode_label}")
     c4.metric("Autoconso PV (chauf.+froid)", f"{Eself_cool:.0f} {periode_label}")
     c5.metric("Coût net (période)", f"{Cout_net_eur:.0f} €")
-
-    if Tmin_hiver < T_confort_min or Tmax_ete > T_confort_max:
-        st.warning(
-            f"Hors bande de confort [{T_confort_min:.0f}–{T_confort_max:.0f} °C] : "
-            f"Tmin={Tmin_hiver:.1f} °C, Tmax={Tmax_ete:.1f} °C."
-        )
