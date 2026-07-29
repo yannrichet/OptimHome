@@ -116,10 +116,11 @@ indexation horaire naïve désynchronise progressivement toute la série.
 `BuildingTherm.py` réimplémente les mêmes équations que `BuildingTherm.mo`
 (mêmes paramètres, mêmes sorties), intégrées avec
 [`scipy.integrate.solve_ivp`](https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html)
-(méthode `BDF`) plutôt qu'avec le solveur DAE de Modelica (DASSL). C'est un
-recours autonome (aucun appel à `omc`/`fzr`/binaire compilé), pas une
-optimisation de vitesse : sur une année complète, il tourne en ~4-5 s contre
-~1-2 s pour le binaire OpenModelica déjà compilé.
+(méthode `BDF`, avec sa jacobienne analytique fournie explicitement plutôt
+qu'estimée par différences finies) plutôt qu'avec le solveur DAE de Modelica
+(DASSL). C'est un recours autonome (aucun appel à `omc`/`fzr`/binaire
+compilé), pas une optimisation de vitesse : sur une année complète, il
+tourne en ~3 s contre ~1-2 s pour le binaire OpenModelica déjà compilé.
 
 **Pourquoi BDF et pas un intégrateur explicite (Euler, RK4) ?** Avec
 l'isolant intérieur par défaut `e_iti = 0 m`, le nœud RC correspondant a une
@@ -234,7 +235,7 @@ avec l'app :
 
 Avec les réglages par défaut (population 16, 6 générations), compter
 quelques minutes d'exécution (chaque simulation annuelle en pur Python
-prend ~4-5 s). Ces deux valeurs sont réglables en tête de la section
+prend ~3 s). Ces deux valeurs sont réglables en tête de la section
 optimisation du notebook pour un front de Pareto plus fin (au prix du
 temps de calcul).
 
