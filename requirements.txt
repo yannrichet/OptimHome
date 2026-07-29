@@ -8,3 +8,4 @@ streamlit-folium
 streamlit-geolocation
 numpy
 scipy
+flask

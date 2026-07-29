@@ -80,7 +80,10 @@ Ouvre ensuite `http://localhost:8501`.
 BuildingTherm.mo         modèle Modelica (source, physique de référence)
 BuildingTherm.py         reimplementation pure Python du meme modele (solveur de secours)
 build.mos                script de compilation omc -> binaire BuildingTherm
+weather.py               fetch météo Open-Meteo + écriture CombiTimeTable (partagé app.py/api.py)
+indicators.py            heures hors confort + degrés-heures (partagé app.py/api.py/notebook)
 app.py                   app Streamlit (UI, météo, simulation, graphique)
+api.py                   API JSON de simulation (voir « API JSON » ci-dessous)
 app_fzr/
   params.txt             template fz minimal (une seule variable : case_id)
   run.sh                 calculateur sh:// invoqué par fzr
@@ -115,6 +118,44 @@ dans le CSV de sortie autour de chaque événement. `run_simulation()` regroupe
 par heure entière et garde la dernière valeur (état stabilisé après
 l'événement) avant de reconstruire la série temporelle — sans quoi une
 indexation horaire naïve désynchronise progressivement toute la série.
+
+## API JSON
+
+[`api.py`](api.py) expose la même simulation que l'app, sans interface, pour
+un usage programmatique. Un seul endpoint, `/simulate`, en `GET` (paramètres
+en query string) ou `POST` (paramètres en JSON, surchargeable par la query
+string) :
+
+```bash
+python api.py                    # sert sur http://localhost:8000
+curl "http://localhost:8000/simulate?Pheat=6000&e_iti=0.05"
+curl -X POST http://localhost:8000/simulate -H "Content-Type: application/json" \
+     -d '{"Ppv_kWc": 0, "Pcool": 0}'
+```
+
+- **Tous les paramètres du modèle physique sont optionnels** (pas seulement
+  les 5 curseurs mis en avant dans l'app) : chaque clé de
+  `BuildingTherm.DEFAULT_PARAMS` (30 au total — `Pheat`, `Pcool`, `ach_day`,
+  `ach_night`, `e_ite`, `e_iti`, `lam_iso`, `Sfloor`, `Htot`, matériau,
+  régulation, PV, etc.) peut être surchargée ; toute clé absente garde sa
+  valeur par défaut. `GET /` liste l'intégralité des paramètres acceptés et
+  leurs valeurs par défaut.
+- **Paramètres hors modèle** (météo/période/confort/coût), mêmes défauts que
+  les sliders de l'app : `lat`, `lon`, `start_date`, `end_date`,
+  `t_confort_min`, `t_confort_max`, `prix_elec`, `prix_rachat_pv`.
+- **Réponse** : indicateurs de confort/coût (`temp_min_C`, `temp_max_C`,
+  `heures_hors_confort`, `degres_heures_froid_Kh`, `degres_heures_chaleur_Kh`,
+  `conso_nette_kWh`, `autoconso_pv_kWh`, `export_pv_kWh`, `cout_net_eur`) —
+  mêmes calculs que la ligne de métriques de l'app (`indicators.py`
+  partagé). Ajouter `?series=true` pour inclure la série horaire complète
+  (`Tair`, `Tout`, `Qheat`, `Qcool`, `Pelec`, `Ppv`, énergies cumulées…).
+- Un paramètre inconnu ou une valeur non numérique renvoie `400` avec un
+  message d'erreur explicite plutôt que d'être ignoré silencieusement.
+- Solveur pur Python uniquement (`BuildingTherm.py`) — pas d'appel au binaire
+  OpenModelica compilé depuis l'API, pour ne pas exposer un `subprocess`
+  construit à partir d'entrées réseau ; le solveur Python est déjà validé à
+  moins de 0,02 K de l'OpenModelica de référence (voir « Fidélité validée »
+  ci-dessous).
 
 ## Solveur de secours Python (`BuildingTherm.py`)
 

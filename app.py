@@ -26,12 +26,12 @@ import fz
 import folium
 import pandas as pd
 import plotly.graph_objects as go
-import requests
 import streamlit as st
 from streamlit_folium import st_folium
 from streamlit_geolocation import streamlit_geolocation
 
 from indicators import comfort_indicators
+import weather as weather_lib
 
 WORK = os.path.dirname(os.path.abspath(__file__))
 FZR_DIR = os.path.join(WORK, "app_fzr")
@@ -70,7 +70,6 @@ def _fzr_outside_main_thread():
         signal.signal = original_signal
 
 DEFAULT_LAT, DEFAULT_LON = 48.8566, 2.3522
-OPEN_METEO_URL = "https://archive-api.open-meteo.com/v1/archive"
 DATE_UI_MIN = date(1950, 1, 15)
 DATE_UI_MAX = date.today()  # aucune prevision : donnees reelles uniquement, jusqu'a aujourd'hui
 DEFAULT_END = DATE_UI_MAX
@@ -86,50 +85,12 @@ MATERIAUX = {
 }
 
 
-@st.cache_data(show_spinner=False)
-def fetch_open_meteo_range(lat: float, lon: float, start_date: date, end_date: date) -> pd.DataFrame:
-    """Serie horaire reelle T2m [°C] + rayonnement global horizontal [W/m2]
-    (ERA5 reanalysis) via l'API Open-Meteo, sans cle, de 1940 a aujourd'hui."""
-    r = requests.get(
-        OPEN_METEO_URL,
-        params={"latitude": lat, "longitude": lon,
-                "start_date": start_date.isoformat(), "end_date": end_date.isoformat(),
-                "hourly": "temperature_2m,shortwave_radiation", "timezone": "UTC"},
-        timeout=30,
-    )
-    r.raise_for_status()
-    payload = r.json()
-    if "hourly" not in payload:
-        raise RuntimeError(payload.get("reason", "réponse Open-Meteo invalide"))
-    h = payload["hourly"]
-    df = pd.DataFrame({
-        "dt": pd.to_datetime(h["time"]),
-        "Tout_C": h["temperature_2m"],
-        "Gh": h["shortwave_radiation"],
-    })
-    return df.dropna(subset=["Tout_C", "Gh"]).reset_index(drop=True)
-
-
 @st.cache_data(show_spinner="Téléchargement météo Open-Meteo…")
 def prepare_weather(lat: float, lon: float, start_date: date, end_date: date):
     """Fenetre meteo horaire reelle (mise en regime + periode choisie), ecrite
-    au format CombiTimeTable dans un fichier stable (cache disque par site+dates)."""
-    fetch_start = start_date - timedelta(days=WARMUP_DAYS)
-    win = fetch_open_meteo_range(round(lat, 3), round(lon, 3), fetch_start, end_date)
-    if win.empty:
-        raise RuntimeError("Aucune donnée météo Open-Meteo pour cette position/période.")
-
-    key = f"{lat:.3f}_{lon:.3f}_{start_date}_{end_date}"
-    h = hashlib.md5(key.encode()).hexdigest()[:16]
-    weather_path = os.path.join(tempfile.gettempdir(), f"buildingopt_weather_{h}.txt")
-    with open(weather_path, "w") as f:
-        f.write("#1\n")
-        f.write(f"double tmy({len(win)},3)\n")
-        for i, row in enumerate(win.itertuples()):
-            f.write(f"{i * 3600} {row.Tout_C + 273.15:.2f} {max(row.Gh, 0.0):.1f}\n")
-
-    stop_time = (len(win) - 1) * 3600
-    return weather_path, stop_time
+    au format CombiTimeTable dans un fichier stable (cache disque par site+dates).
+    Wrapper Streamlit-cache autour de weather.prepare_weather (partage avec api.py)."""
+    return weather_lib.prepare_weather(lat, lon, start_date, end_date, warmup_days=WARMUP_DAYS)
 
 
 st.set_page_config(

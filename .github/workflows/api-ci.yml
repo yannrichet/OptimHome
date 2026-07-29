@@ -1,0 +1,121 @@
+name: API CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "api.py"
+      - "weather.py"
+      - "indicators.py"
+      - "BuildingTherm.py"
+      - "tests/test_api.py"
+      - "tests/fixtures/**"
+      - "requirements*.txt"
+      - ".github/workflows/api-ci.yml"
+  pull_request:
+    paths:
+      - "api.py"
+      - "weather.py"
+      - "indicators.py"
+      - "BuildingTherm.py"
+      - "tests/test_api.py"
+      - "tests/fixtures/**"
+      - "requirements*.txt"
+      - ".github/workflows/api-ci.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Syntax-check api.py and its dependencies
+        run: python -m py_compile api.py weather.py indicators.py BuildingTherm.py
+
+      - name: Run API unit tests (weather mocked to a local fixture — no network)
+        run: pytest tests/test_api.py -v
+
+  smoke:
+    # Real end-to-end check: start the actual Flask dev server and hit it
+    # with curl, including one live Open-Meteo fetch — the unit tests above
+    # mock prepare_weather() and so never exercise the real network path.
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Start API server
+        run: |
+          python api.py &
+          echo $! > api.pid
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8000/ > /dev/null && exit 0
+            sleep 1
+          done
+          echo "API server did not come up in time" >&2
+          exit 1
+
+      - name: GET / lists all model parameters
+        run: |
+          curl -sf http://localhost:8000/ | python -c "
+          import json, sys
+          import BuildingTherm as bt
+          body = json.load(sys.stdin)
+          assert set(body['parametres_modele']) == set(bt.DEFAULT_PARAMS)
+          print('OK:', len(body['parametres_modele']), 'parametres exposes')
+          "
+
+      - name: Unknown parameter is rejected with 400
+        run: |
+          http_status=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:8000/simulate?not_a_param=1")
+          test "$http_status" = "400"
+
+      - name: GET /simulate runs a real simulation (live Open-Meteo fetch)
+        run: |
+          curl -sf "http://localhost:8000/simulate?Pheat=6000&e_iti=0.05" | python -c "
+          import json, sys
+          body = json.load(sys.stdin)
+          assert body['params']['Pheat'] == 6000.0
+          assert body['params']['e_iti'] == 0.05
+          r = body['resultats']
+          for key in ('temp_min_C', 'temp_max_C', 'heures_hors_confort',
+                      'degres_heures_froid_Kh', 'degres_heures_chaleur_Kh',
+                      'conso_nette_kWh', 'autoconso_pv_kWh', 'export_pv_kWh', 'cout_net_eur'):
+              assert key in r, f'missing {key}'
+          print('OK:', r)
+          "
+
+      - name: POST /simulate with JSON body
+        run: |
+          curl -sf -X POST http://localhost:8000/simulate \
+            -H "Content-Type: application/json" \
+            -d '{"Ppv_kWc": 0, "Pcool": 0}' | python -c "
+          import json, sys
+          body = json.load(sys.stdin)
+          assert body['params']['Ppv_kWc'] == 0.0
+          assert body['resultats']['autoconso_pv_kWh'] == 0.0
+          print('OK')
+          "
+
+      - name: Stop server
+        if: always()
+        run: kill "$(cat api.pid)" 2>/dev/null || true
