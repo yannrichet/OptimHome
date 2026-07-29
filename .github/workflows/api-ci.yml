@@ -1,6 +1,7 @@
 name: API CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
@@ -11,6 +12,7 @@ on:
       - "tests/test_api.py"
       - "tests/fixtures/**"
       - "requirements*.txt"
+      - "pytest.ini"
       - ".github/workflows/api-ci.yml"
   pull_request:
     paths:
@@ -21,6 +23,7 @@ on:
       - "tests/test_api.py"
       - "tests/fixtures/**"
       - "requirements*.txt"
+      - "pytest.ini"
       - ".github/workflows/api-ci.yml"
 
 jobs:
