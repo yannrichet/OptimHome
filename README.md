@@ -35,10 +35,15 @@ position/dates.
   [Solveur de secours Python](#solveur-de-secours-python-buildingthermpy). Un
   bandeau sous le titre indique en permanence quel solveur a réellement
   tourné (🟢 OpenModelica / 🟡 Python).
-- **Sorties** : indicateurs de confort et de coût sur la période choisie
-  (température min/max, conso nette après PV, autoconsommation, coût en €),
-  et un graphique Plotly (températures intérieure/extérieure min-max
-  journalières + puissances importées/autoconsommées).
+- **Sorties** : indicateurs de confort et de coût sur la période choisie, sur
+  deux lignes — température min./max., heures hors bande de confort, coût
+  net en € ; puis degrés-heures d'inconfort sous la limite basse
+  (`Froid·Heure`) et au-dessus de la limite haute (`Chaleur·Heure`) — plus
+  représentatifs qu'un simple pic de température, voir
+  [Notebook d'optimisation](#notebook-doptimisation-multi-objectif-nsga-ii)),
+  conso nette après PV, autoconsommation — et un graphique Plotly
+  (températures intérieure/extérieure min-max journalières + puissances
+  importées/autoconsommées).
 
 ## Installation
 
@@ -223,8 +228,13 @@ avec l'app :
   GitHub si absent (pas besoin d'OpenModelica) ;
 - **mêmes variables d'entrée** que les 5 curseurs mis en avant dans l'app
   (Chauffage, Climatisation, Photovolt., Isolation ext., Isolation int.) et
-  **3 mêmes sorties/objectifs** que l'app (température min., température
-  max., coût net €) ;
+  **3 mêmes sorties/objectifs** que l'app : degrés-heures d'inconfort sous la
+  limite basse (`Froid·Heure`) et au-dessus de la limite haute
+  (`Chaleur·Heure`), coût net € — plutôt qu'un simple Tmin/Tmax, plus lisse
+  pour NSGA-II (une somme varie avec chaque variable de conception,
+  contrairement à un min/max dont le
+  gradient est presque partout nul) et plus représentatif du vécu réel (un
+  pic bref pèse moins qu'un dépassement prolongé) ;
 - lance **NSGA-II** ([`pymoo`](https://pymoo.org/)) à 3 objectifs pour
   explorer le compromis confort d'hiver ↔ confort d'été ↔ coût, sur une
   année de météo réelle (Open-Meteo) ;

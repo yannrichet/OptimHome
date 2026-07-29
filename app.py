@@ -31,6 +31,8 @@ import streamlit as st
 from streamlit_folium import st_folium
 from streamlit_geolocation import streamlit_geolocation
 
+from indicators import comfort_indicators
+
 WORK = os.path.dirname(os.path.abspath(__file__))
 FZR_DIR = os.path.join(WORK, "app_fzr")
 FZR_PARAMS = os.path.join(FZR_DIR, "params.txt")
@@ -381,13 +383,16 @@ with page_col_right:
     # ---------------------------------------------------------------------------
     n_days = (date_end - date_start).days + 1
 
-    Tmin_hiver = sim_p["Tair"].min() - 273.15
-    Tmax_ete = sim_p["Tair"].max() - 273.15
+    Tint_period = sim_p["Tair"] - 273.15
+    Tmin_hiver = Tint_period.min()
+    Tmax_ete = Tint_period.max()
     Egrid_cool = sim["Egrid_cool"].iloc[-1]  # import reseau NET, chauffage+froid, apres autoconso PV
     Eself_cool = sim["Eself_cool"].iloc[-1]  # autoconsommation PV directe, chauffage+froid
     Eexport = sim["Eexport"].iloc[-1]
     Conso_nette = Egrid_cool  # deja net de l'autoconso PV (chauffage compris)
     Cout_net_eur = Conso_nette * prix_elec - Eexport * prix_rachat_pv
+
+    heures_inconfort, DH_froid, DH_chaleur = comfort_indicators(Tint_period, T_confort_min, T_confort_max)
 
     Text_min_period = sim_p["Tout"].min() - 273.15
     Text_max_period = sim_p["Tout"].max() - 273.15
@@ -450,26 +455,40 @@ with page_col_right:
     st.plotly_chart(fig, use_container_width=True)
 
     # ---------------------------------------------------------------------------
-    # Resultats de simulation, sous le graphique
+    # Resultats de simulation, sous le graphique — 2 lignes de 4 indicateurs
     # ---------------------------------------------------------------------------
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric(
+    r1c1, r1c2, r1c3, r1c4 = st.columns(4)
+    r1c1.metric(
         "Temp min. [°C]", f"{Tmin_hiver:.1f}",
         help="Température intérieure minimale atteinte sur la période choisie (après mise en régime de 14 j).",
     )
-    c2.metric(
+    r1c2.metric(
         "Temp max. [°C]", f"{Tmax_ete:.1f}",
         help="Température intérieure maximale atteinte sur la période choisie (après mise en régime de 14 j).",
     )
-    c3.metric(
+    r1c3.metric(
+        "Heures hors confort", f"{heures_inconfort}",
+        help=f"Nombre d'heures, sur les {n_days} j de la période choisie (mise en régime de 14 j déjà exclue), où la température intérieure sort de la bande de confort {T_confort_min:.0f}–{T_confort_max:.0f} °C.",
+    )
+    r1c4.metric(
+        "Coût [€]", f"{Cout_net_eur:.0f}",
+        help="Coût net sur la période : conso nette valorisée au prix de l'électricité, moins le surplus PV exporté valorisé au tarif de rachat. Hors CAPEX (investissement chauffage/PAC/PV/isolation non inclus).",
+    )
+
+    r2c1, r2c2, r2c3, r2c4 = st.columns(4)
+    r2c1.metric(
+        "Chaleur·Heure [K·h]", f"{DH_chaleur:.0f}",
+        help="Degrés-heures d'inconfort par excès de chaleur : somme, heure par heure, du dépassement au-dessus du seuil de confort max (≈ DJU horaires). Plus représentatif qu'un pic ponctuel de Tmax, car il pèse aussi la durée du dépassement.",
+    )
+    r2c2.metric(
+        "Froid·Heure [K·h]", f"{DH_froid:.0f}",
+        help="Degrés-heures d'inconfort par manque de chauffage : somme, heure par heure, du déficit de température sous le seuil de confort min. Plus représentatif qu'un pic ponctuel de Tmin, car il pèse aussi la durée du déficit.",
+    )
+    r2c3.metric(
         "Conso nette [kWh]", f"{Conso_nette:.0f}",
         help=f"Électricité importée du réseau pour le chauffage et le rafraîchissement sur les {n_days} j de la période choisie, après déduction de l'autoconsommation PV.",
     )
-    c4.metric(
-        "Autoconso [kWh]", f"{Eself_cool:.0f}",
+    r2c4.metric(
+        "Autoconso PV [kWh]", f"{Eself_cool:.0f}",
         help=f"Production photovoltaïque consommée directement sur place pour le chauffage et le rafraîchissement sur les {n_days} j de la période choisie (sans passer par le réseau).",
-    )
-    c5.metric(
-        "Coût [€]", f"{Cout_net_eur:.0f}",
-        help="Coût net sur la période : conso nette valorisée au prix de l'électricité, moins le surplus PV exporté valorisé au tarif de rachat. Hors CAPEX (investissement chauffage/PAC/PV/isolation non inclus).",
     )
