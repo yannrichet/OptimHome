@@ -43,7 +43,7 @@ DEFAULT_PARAMS = {
 (I_TAIR, I_T1, I_T2, I_T3, I_T4, I_T5, I_T6,
  I_EHEAT, I_ECOOL, I_EGRID, I_ESELF, I_EEXPORT) = range(12)
 N_STATES = 12
-Y0 = [285.15, 284.9, 284.6, 284.0, 283.2, 282.5, 282.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+Y0 = (285.15, 284.9, 284.6, 284.0, 283.2, 282.5, 282.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
 
 def load_weather_table(path):
