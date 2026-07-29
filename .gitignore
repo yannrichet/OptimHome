@@ -28,7 +28,11 @@ build_nb.mos
 *.csv
 *.png
 !screenshot.png
+!tests/fixtures/*.csv
 *.html
 om.log
+
+# Test cache
+.pytest_cache/
 
 .DS_Store
