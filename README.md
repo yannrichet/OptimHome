@@ -36,10 +36,13 @@ position/dates.
   bandeau sous le titre indique en permanence quel solveur a réellement
   tourné (🟢 OpenModelica / 🟡 Python).
 - **Sorties** : indicateurs de confort et de coût sur la période choisie, sur
-  deux lignes — température min./max., heures hors bande de confort, coût
-  net en € ; puis degrés-heures d'inconfort sous la limite basse
-  (`Froid·Heure`) et au-dessus de la limite haute (`Chaleur·Heure`) — plus
-  représentatifs qu'un simple pic de température, voir
+  deux lignes — température min./max., heures hors bande de confort (avec
+  1 °C de tolérance de part et d'autre de 19-26 °C, pour absorber l'écart de
+  régime permanent inhérent au régulateur proportionnel — cf.
+  `indicators.comfort_indicators()`), coût net en € ; puis degrés-heures
+  d'inconfort sous la limite basse (`Froid·Heure`) et au-dessus de la limite
+  haute (`Chaleur·Heure`, même tolérance) — plus représentatifs qu'un simple
+  pic de température, voir
   [Notebook d'optimisation](#notebook-doptimisation-multi-objectif-nsga-ii)),
   conso nette après PV, autoconsommation — et un graphique Plotly
   (températures intérieure/extérieure min-max journalières + puissances
@@ -142,7 +145,8 @@ curl -X POST http://localhost:8000/simulate -H "Content-Type: application/json" 
   leurs valeurs par défaut.
 - **Paramètres hors modèle** (météo/période/confort/coût), mêmes défauts que
   les sliders de l'app : `lat`, `lon`, `start_date`, `end_date`,
-  `t_confort_min`, `t_confort_max`, `prix_elec`, `prix_rachat_pv`.
+  `t_confort_min`, `t_confort_max`, `tolerance` (1 °C par défaut — marge
+  autour de la bande de confort, voir ci-dessus), `prix_elec`, `prix_rachat_pv`.
 - **Réponse** : indicateurs de confort/coût (`temp_min_C`, `temp_max_C`,
   `heures_hors_confort`, `degres_heures_froid_Kh`, `degres_heures_chaleur_Kh`,
   `conso_nette_kWh`, `autoconso_pv_kWh`, `export_pv_kWh`, `cout_net_eur`) —
@@ -188,7 +192,7 @@ export PV) < 0.02 %.
 
 Le modèle a 12 états : la température d'air intérieur `Tair`, 6 températures
 de nœuds du mur (`T1`…`T6`, réseau RC), et 5 énergies cumulées (`Eheat`,
-`Ecool`, `Egrid_cool`, `Eself_cool`, `Eexport`, intégrées uniquement après
+`Ecool`, `Egrid_total`, `Eself_cool`, `Eexport`, intégrées uniquement après
 14 j de mise en régime). Aucun événement discret : les commutations
 (ventilation, chauffage/froid) sont remplacées par des rampes continues
 (`min`/`max`), ce qui rend le système intégrable par un solveur ODE standard
@@ -245,7 +249,7 @@ Pexport     = max(Ppv − Pelec, 0)   -- surplus injecté au réseau
 
 **Indicateurs annuels**, intégrés uniquement quand `meas = 1` (après 14 j de
 mise en régime) : `dEheat/dt = meas·Qheat/3.6e6`, et de même pour `Ecool`
-(← `Pelec`), `Egrid_cool` (← `Pgrid_cool`), `Eself_cool` (← `Pself_cool`),
+(← `Pelec`), `Egrid_total` (← `Pgrid_cool`), `Eself_cool` (← `Pself_cool`),
 `Eexport` (← `Pexport`), en kWh.
 
 Toutes les résistances/capacités du réseau RC (`Rsi`, `R12`…`R6e`, `C1`…`C6`)
@@ -284,11 +288,38 @@ avec l'app :
   chacun le même graphique temporel que l'app (bande de confort,
   températures intérieure/extérieure, puissances importées/autoconsommées).
 
-Avec les réglages par défaut (population 16, 6 générations), compter
-quelques minutes d'exécution (chaque simulation annuelle en pur Python
-prend ~3 s). Ces deux valeurs sont réglables en tête de la section
-optimisation du notebook pour un front de Pareto plus fin (au prix du
-temps de calcul).
+Avec les réglages par défaut (population 40, 20 générations, soit ~800
+simulations annuelles), compter 35-45 minutes en pur Python (chaque
+simulation annuelle prend ~3 s). Ces deux valeurs sont réglables en tête de
+la section optimisation du notebook pour un front de Pareto plus fin (au
+prix du temps de calcul).
+
+### Variante `fz` : [`BuildingOpt_fz.ipynb`](BuildingOpt_fz.ipynb)
+
+[![Ouvrir dans Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/yannrichet/OptimHome/blob/main/BuildingOpt_fz.ipynb)
+
+Même notebook, mêmes variables/objectifs/résultats, mais qui utilise
+[`fz`](https://github.com/Funz/fz) **autant que possible** plutôt que
+`pymoo` :
+
+- le plan d'expérience/optimisation NSGA-II est piloté par `fz.fzd()`, avec
+  le modèle physique appelé **directement comme fonction Python** (mode
+  « modèle = fonction Python » de `fzd` — aucun fichier d'entrée/sortie ni
+  calculateur externe pour le solveur pur Python) ;
+- l'algorithme NSGA-II lui-même est
+  [`examples/algorithms/nsga2.py`](https://github.com/Funz/fz/blob/main/examples/algorithms/nsga2.py),
+  le code natif de `fz` (pure stdlib, aucune dépendance numpy) — pas une
+  réimplémentation dans ce dépôt ;
+- le solveur OpenModelica optionnel appelle lui aussi le binaire compilé via
+  `fz.fzr()` (même calculateur `sh://app_fzr/run.sh` que `app.py`) plutôt
+  qu'un `subprocess` direct.
+
+**Nécessite la branche `main` de `fz` sur GitHub, pas la version publiée
+sur PyPI** : le mode « modèle = fonction Python » et les objectifs
+multi-scalaires (requis pour NSGA-II) sont des fonctionnalités récentes,
+pas encore publiées sur PyPI — la cellule d'installation du notebook
+installe `fz` directement depuis GitHub
+(`pip install git+https://github.com/Funz/fz.git@main`).
 
 ## Limites connues
 

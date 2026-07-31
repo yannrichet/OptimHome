@@ -4,7 +4,11 @@ hours outside the comfort band, and cold/heat discomfort degree-hours (see
 README's "Sorties" section). Literal naming: DH_froid = degree-hours below
 the comfort floor (it's cold), DH_chaleur = degree-hours above the comfort
 ceiling (it's hot) — not the building-industry DJU chauffage/froid
-convention (which names by the HVAC system needed, the opposite mapping)."""
+convention (which names by the HVAC system needed, the opposite mapping).
+
+These tests pass tolerance=0 explicitly to pin down the raw boundary math,
+independent of the function's own default tolerance (see
+test_default_tolerance_widens_the_comfort_band below for that)."""
 import pandas as pd
 import pytest
 
@@ -13,7 +17,7 @@ from indicators import comfort_indicators
 
 def test_all_hours_within_band_gives_zero_everywhere():
     Tint = pd.Series([20.0, 21.0, 22.0, 25.0])
-    hours, dh_froid, dh_chaleur = comfort_indicators(Tint, T_confort_min=19.0, T_confort_max=26.0)
+    hours, dh_froid, dh_chaleur = comfort_indicators(Tint, T_confort_min=19.0, T_confort_max=26.0, tolerance=0)
     assert hours == 0
     assert dh_froid == pytest.approx(0.0)
     assert dh_chaleur == pytest.approx(0.0)
@@ -21,7 +25,7 @@ def test_all_hours_within_band_gives_zero_everywhere():
 
 def test_undershoot_counts_as_cold_degree_hours():
     Tint = pd.Series([15.0, 17.0, 20.0])  # 4 K + 2 K under a 19 C floor, 1 in-band
-    hours, dh_froid, dh_chaleur = comfort_indicators(Tint, T_confort_min=19.0, T_confort_max=26.0)
+    hours, dh_froid, dh_chaleur = comfort_indicators(Tint, T_confort_min=19.0, T_confort_max=26.0, tolerance=0)
     assert hours == 2
     assert dh_froid == pytest.approx(4.0 + 2.0)
     assert dh_chaleur == pytest.approx(0.0)
@@ -29,7 +33,7 @@ def test_undershoot_counts_as_cold_degree_hours():
 
 def test_overshoot_counts_as_heat_degree_hours():
     Tint = pd.Series([27.0, 30.0, 20.0])  # 1 K + 4 K over a 26 C ceiling, 1 in-band
-    hours, dh_froid, dh_chaleur = comfort_indicators(Tint, T_confort_min=19.0, T_confort_max=26.0)
+    hours, dh_froid, dh_chaleur = comfort_indicators(Tint, T_confort_min=19.0, T_confort_max=26.0, tolerance=0)
     assert hours == 2
     assert dh_froid == pytest.approx(0.0)
     assert dh_chaleur == pytest.approx(1.0 + 4.0)
@@ -40,6 +44,29 @@ def test_a_brief_spike_counts_less_than_a_sustained_excursion():
     weigh less than the same peak sustained over many hours."""
     brief_spike = pd.Series([26.0, 30.0, 26.0, 26.0, 26.0])
     sustained = pd.Series([28.0, 28.0, 28.0, 28.0, 28.0])
-    _, _, dh_brief = comfort_indicators(brief_spike, T_confort_min=19.0, T_confort_max=26.0)
-    _, _, dh_sustained = comfort_indicators(sustained, T_confort_min=19.0, T_confort_max=26.0)
+    _, _, dh_brief = comfort_indicators(brief_spike, T_confort_min=19.0, T_confort_max=26.0, tolerance=0)
+    _, _, dh_sustained = comfort_indicators(sustained, T_confort_min=19.0, T_confort_max=26.0, tolerance=0)
     assert dh_brief < dh_sustained
+
+
+def test_default_tolerance_widens_the_comfort_band():
+    """Without an explicit tolerance, the effective band is [min-1, max+1]:
+    a chronic 0.5 K controller droop just under the 19 C floor must NOT
+    count as discomfort, but a 1.5 K deficit still must."""
+    within_tolerance = pd.Series([18.5, 18.5, 18.5])   # 0.5 K under 19, within the 1 C default margin
+    beyond_tolerance = pd.Series([17.5, 17.5, 17.5])   # 1.5 K under 19, beyond the 1 C default margin
+
+    hours, dh_froid, _ = comfort_indicators(within_tolerance, T_confort_min=19.0, T_confort_max=26.0)
+    assert hours == 0
+    assert dh_froid == pytest.approx(0.0)
+
+    hours, dh_froid, _ = comfort_indicators(beyond_tolerance, T_confort_min=19.0, T_confort_max=26.0)
+    assert hours == 3
+    assert dh_froid == pytest.approx(3 * 0.5)  # 1.5 K deficit minus the 1 C margin already absorbed
+
+
+def test_tolerance_is_explicitly_overridable():
+    Tint = pd.Series([18.5])  # 0.5 K under 19
+    hours_no_tol, dh_froid_no_tol, _ = comfort_indicators(Tint, T_confort_min=19.0, T_confort_max=26.0, tolerance=0)
+    assert hours_no_tol == 1
+    assert dh_froid_no_tol == pytest.approx(0.5)

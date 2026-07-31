@@ -73,9 +73,8 @@ model BuildingTherm
     Pself_cool(t)  = min(Pelec(t),  Ppv(t))      -- autoconsommation directe
     Pexport(t)     = max(Ppv(t) - Pelec(t), 0)   -- surplus injecte au reseau
   Eheat reste par ailleurs la demande de chauffage BRUTE (thermique, avant
-  PV) ; c'est desormais Egrid_cool/Eself_cool (noms conserves pour
-  compatibilite) qui portent la consommation electrique NETTE totale
-  (chauffage + froid), apres autoconsommation PV.
+  PV) ; ce sont Egrid_total/Eself_cool qui portent la consommation
+  electrique NETTE totale (chauffage + froid), apres autoconsommation PV.
 
   ============================================================================
   SYSTEMES DIMENSIONNES PAR L'OPTIMISEUR
@@ -185,7 +184,7 @@ model BuildingTherm
   Real meas = (if time > 14*86400 then 1.0 else 0.0);
   Real Eheat(start = 0, fixed = true) "chauffage, demande thermique BRUTE avant PV [kWh/an]";
   Real Ecool(start = 0, fixed = true) "electricite BRUTE totale (chauffage+froid+ventilateurs) [kWh/an] (hors PV)";
-  Real Egrid_cool(start = 0, fixed = true) "electricite NETTE reseau (chauffage+froid), apres autoconso PV [kWh/an]";
+  Real Egrid_total(start = 0, fixed = true) "electricite NETTE reseau (chauffage+froid), apres autoconso PV [kWh/an]";
   Real Eself_cool(start = 0, fixed = true) "autoconsommation PV directe (chauffage+froid) [kWh/an]";
   Real Eexport(start = 0, fixed = true) "surplus PV exporte au reseau [kWh/an]";
   // Tmin_hiver et Tmax_ete sont extraits de la colonne Tair du CSV par fz
@@ -202,7 +201,7 @@ equation
   C6*der(T6) = (T5 - T6)/R56 + (Tout - T6)/R6e;
   der(Eheat) = meas*Qheat/3.6e6;
   der(Ecool) = meas*Pelec/3.6e6;
-  der(Egrid_cool) = meas*Pgrid_cool/3.6e6;
+  der(Egrid_total) = meas*Pgrid_cool/3.6e6;
   der(Eself_cool) = meas*Pself_cool/3.6e6;
   der(Eexport) = meas*Pexport/3.6e6;
 

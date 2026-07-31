@@ -58,7 +58,7 @@ def test_interior_air_temperature_matches_openmodelica(reference, python_result)
     )
 
 
-@pytest.mark.parametrize("column", ["Eheat", "Ecool", "Egrid_cool", "Eself_cool", "Eexport"])
+@pytest.mark.parametrize("column", ["Eheat", "Ecool", "Egrid_total", "Eself_cool", "Eexport"])
 def test_cumulative_energy_indicators_match_openmodelica(reference, python_result, column):
     py_end = python_result[column].iloc[-1]
     om_end = reference[column].iloc[-1]

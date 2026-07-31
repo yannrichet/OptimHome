@@ -1,3 +1,3 @@
 loadModel(Modelica); getErrorString();
 loadFile("BuildingTherm.mo"); getErrorString();
-buildModel(BuildingTherm, outputFormat="csv", variableFilter="time|Eheat|Ecool|Egrid_cool|Eself_cool|Eexport|Tair|Tout|Qheat|Pelec|Ppv|Pself_cool|Pgrid_cool"); getErrorString();
+buildModel(BuildingTherm, outputFormat="csv", variableFilter="time|Eheat|Ecool|Egrid_total|Eself_cool|Eexport|Tair|Tout|Qheat|Pelec|Ppv|Pself_cool|Pgrid_cool"); getErrorString();

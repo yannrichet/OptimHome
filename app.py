@@ -30,7 +30,7 @@ import streamlit as st
 from streamlit_folium import st_folium
 from streamlit_geolocation import streamlit_geolocation
 
-from indicators import comfort_indicators
+from indicators import DEFAULT_TOLERANCE_C, comfort_indicators
 import weather as weather_lib
 
 WORK = os.path.dirname(os.path.abspath(__file__))
@@ -46,7 +46,7 @@ FZ_MODEL = {
         "Qheat": "python://csv_file('res.csv', column='Qheat')",
         "Pgrid_cool": "python://csv_file('res.csv', column='Pgrid_cool')",
         "Pself_cool": "python://csv_file('res.csv', column='Pself_cool')",
-        "Egrid_cool_last": "python://csv_file('res.csv', column='Egrid_cool')[-1]",
+        "Egrid_total_last": "python://csv_file('res.csv', column='Egrid_total')[-1]",
         "Eself_cool_last": "python://csv_file('res.csv', column='Eself_cool')[-1]",
         "Eexport_last": "python://csv_file('res.csv', column='Eexport')[-1]",
     },
@@ -71,7 +71,7 @@ def _fzr_outside_main_thread():
 
 DEFAULT_LAT, DEFAULT_LON = 48.8566, 2.3522
 DATE_UI_MIN = date(1950, 1, 15)
-DATE_UI_MAX = date.today()  # aucune prevision : donnees reelles uniquement, jusqu'a aujourd'hui
+DATE_UI_MAX = date.today() - timedelta(days=1)  # Open-Meteo n'a pas encore les donnees d'aujourd'hui (decalage d'archivage)
 DEFAULT_END = DATE_UI_MAX
 DEFAULT_START = DEFAULT_END - timedelta(days=364)
 
@@ -232,7 +232,7 @@ with page_col_left:
         sim = raw.groupby("hour", as_index=False).last()
         sim["time"] = sim["hour"] * 3600
         sim = sim.drop(columns="hour")
-        sim["Egrid_cool"] = row["Egrid_cool_last"]
+        sim["Egrid_total"] = row["Egrid_total_last"]
         sim["Eself_cool"] = row["Eself_cool_last"]
         sim["Eexport"] = row["Eexport_last"]
         return sim
@@ -244,7 +244,7 @@ with page_col_left:
         rows = BuildingTherm.run_simulation(params, weather_path, stop_time)
         return pd.DataFrame(rows)[
             ["time", "Tair", "Tout", "Qheat", "Pgrid_cool", "Pself_cool",
-             "Egrid_cool", "Eself_cool", "Eexport"]
+             "Egrid_total", "Eself_cool", "Eexport"]
         ]
 
     @st.cache_data(show_spinner="Simulation en cours…")
@@ -347,10 +347,10 @@ with page_col_right:
     Tint_period = sim_p["Tair"] - 273.15
     Tmin_hiver = Tint_period.min()
     Tmax_ete = Tint_period.max()
-    Egrid_cool = sim["Egrid_cool"].iloc[-1]  # import reseau NET, chauffage+froid, apres autoconso PV
+    Egrid_total = sim["Egrid_total"].iloc[-1]  # import reseau NET, chauffage+froid, apres autoconso PV
     Eself_cool = sim["Eself_cool"].iloc[-1]  # autoconsommation PV directe, chauffage+froid
     Eexport = sim["Eexport"].iloc[-1]
-    Conso_nette = Egrid_cool  # deja net de l'autoconso PV (chauffage compris)
+    Conso_nette = Egrid_total  # deja net de l'autoconso PV (chauffage compris)
     Cout_net_eur = Conso_nette * prix_elec - Eexport * prix_rachat_pv
 
     heures_inconfort, DH_froid, DH_chaleur = comfort_indicators(Tint_period, T_confort_min, T_confort_max)
@@ -429,7 +429,7 @@ with page_col_right:
     )
     r1c3.metric(
         "Heures hors confort", f"{heures_inconfort}",
-        help=f"Nombre d'heures, sur les {n_days} j de la période choisie (mise en régime de 14 j déjà exclue), où la température intérieure sort de la bande de confort {T_confort_min:.0f}–{T_confort_max:.0f} °C.",
+        help=f"Nombre d'heures, sur les {n_days} j de la période choisie (mise en régime de 14 j déjà exclue), où la température intérieure sort de la bande de confort {T_confort_min:.0f}–{T_confort_max:.0f} °C, avec une tolérance de {DEFAULT_TOLERANCE_C:.0f} °C de part et d'autre (un régulateur proportionnel a toujours un léger écart de régime permanent ; sans marge, quelques dixièmes de degré sous la consigne compteraient à tort comme inconfort).",
     )
     r1c4.metric(
         "Coût [€]", f"{Cout_net_eur:.0f}",
@@ -439,11 +439,11 @@ with page_col_right:
     r2c1, r2c2, r2c3, r2c4 = st.columns(4)
     r2c1.metric(
         "Chaleur·Heure [K·h]", f"{DH_chaleur:.0f}",
-        help="Degrés-heures d'inconfort par excès de chaleur : somme, heure par heure, du dépassement au-dessus du seuil de confort max (≈ DJU horaires). Plus représentatif qu'un pic ponctuel de Tmax, car il pèse aussi la durée du dépassement.",
+        help=f"Degrés-heures d'inconfort par excès de chaleur : somme, heure par heure, du dépassement au-dessus du seuil de confort max + {DEFAULT_TOLERANCE_C:.0f} °C de tolérance (≈ DJU horaires). Plus représentatif qu'un pic ponctuel de Tmax, car il pèse aussi la durée du dépassement.",
     )
     r2c2.metric(
         "Froid·Heure [K·h]", f"{DH_froid:.0f}",
-        help="Degrés-heures d'inconfort par manque de chauffage : somme, heure par heure, du déficit de température sous le seuil de confort min. Plus représentatif qu'un pic ponctuel de Tmin, car il pèse aussi la durée du déficit.",
+        help=f"Degrés-heures d'inconfort par manque de chauffage : somme, heure par heure, du déficit de température sous le seuil de confort min − {DEFAULT_TOLERANCE_C:.0f} °C de tolérance. Plus représentatif qu'un pic ponctuel de Tmin, car il pèse aussi la durée du déficit.",
     )
     r2c3.metric(
         "Conso nette [kWh]", f"{Conso_nette:.0f}",

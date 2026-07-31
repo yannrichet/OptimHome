@@ -280,7 +280,7 @@ def simulate(params, weather, stop_time, output_interval=3600.0):
             "Qcool": a["Qcool"], "Pelec": a["Pelec"], "Ppv": a["Ppv"],
             "Pgrid_cool": a["Pgrid_cool"], "Pself_cool": a["Pself_cool"],
             "Eheat": y[I_EHEAT], "Ecool": y[I_ECOOL],
-            "Egrid_cool": y[I_EGRID], "Eself_cool": y[I_ESELF],
+            "Egrid_total": y[I_EGRID], "Eself_cool": y[I_ESELF],
             "Eexport": y[I_EEXPORT],
         })
     return rows

@@ -40,7 +40,7 @@ WARMUP_DAYS = 14
 # memes valeurs par defaut que les sliders de app.py.
 META_PARAM_NAMES = {
     "lat", "lon", "start_date", "end_date",
-    "t_confort_min", "t_confort_max", "prix_elec", "prix_rachat_pv", "series",
+    "t_confort_min", "t_confort_max", "tolerance", "prix_elec", "prix_rachat_pv", "series",
 }
 
 
@@ -87,7 +87,7 @@ def index():
         parametres_meteo={"lat": DEFAULT_LAT, "lon": DEFAULT_LON,
                            "start_date": "AAAA-MM-JJ (defaut: aujourd'hui - 364 j)",
                            "end_date": "AAAA-MM-JJ (defaut: aujourd'hui)"},
-        parametres_confort_cout={"t_confort_min": 19.0, "t_confort_max": 26.0,
+        parametres_confort_cout={"t_confort_min": 19.0, "t_confort_max": 26.0, "tolerance": 1.0,
                                   "prix_elec": 0.2516, "prix_rachat_pv": 0.04},
         options={"series": "false — inclure la série horaire complète dans la réponse"},
     )
@@ -116,6 +116,7 @@ def simulate():
 
         t_confort_min = _parse_float(raw.get("t_confort_min", 19.0), "t_confort_min")
         t_confort_max = _parse_float(raw.get("t_confort_max", 26.0), "t_confort_max")
+        tolerance = _parse_float(raw.get("tolerance", 1.0), "tolerance")
         prix_elec = _parse_float(raw.get("prix_elec", 0.2516), "prix_elec")
         prix_rachat_pv = _parse_float(raw.get("prix_rachat_pv", 0.04), "prix_rachat_pv")
         include_series = _parse_bool(raw.get("series"))
@@ -132,19 +133,20 @@ def simulate():
     warmup_hours = WARMUP_DAYS * 24
     sim_p = sim.iloc[warmup_hours:] if len(sim) > warmup_hours else sim
     Tint_period = sim_p["Tair"] - 273.15
-    heures_hors_confort, dh_froid, dh_chaleur = comfort_indicators(Tint_period, t_confort_min, t_confort_max)
+    heures_hors_confort, dh_froid, dh_chaleur = comfort_indicators(
+        Tint_period, t_confort_min, t_confort_max, tolerance=tolerance)
 
-    egrid_cool = float(sim["Egrid_cool"].iloc[-1])
+    egrid_total = float(sim["Egrid_total"].iloc[-1])
     eself_cool = float(sim["Eself_cool"].iloc[-1])
     eexport = float(sim["Eexport"].iloc[-1])
-    cout_net_eur = egrid_cool * prix_elec - eexport * prix_rachat_pv
+    cout_net_eur = egrid_total * prix_elec - eexport * prix_rachat_pv
 
     response = {
         "params": dict(bt.DEFAULT_PARAMS, **params),
         "meteo": {"lat": lat, "lon": lon,
                   "start_date": start_date.isoformat(), "end_date": end_date.isoformat(),
                   "warmup_days": WARMUP_DAYS},
-        "confort_cout": {"t_confort_min": t_confort_min, "t_confort_max": t_confort_max,
+        "confort_cout": {"t_confort_min": t_confort_min, "t_confort_max": t_confort_max, "tolerance": tolerance,
                           "prix_elec": prix_elec, "prix_rachat_pv": prix_rachat_pv},
         "resultats": {
             "temp_min_C": round(float(Tint_period.min()), 2),
@@ -152,7 +154,7 @@ def simulate():
             "heures_hors_confort": heures_hors_confort,
             "degres_heures_froid_Kh": round(float(dh_froid), 2),
             "degres_heures_chaleur_Kh": round(float(dh_chaleur), 2),
-            "conso_nette_kWh": round(egrid_cool, 2),
+            "conso_nette_kWh": round(egrid_total, 2),
             "autoconso_pv_kWh": round(eself_cool, 2),
             "export_pv_kWh": round(eexport, 2),
             "cout_net_eur": round(cout_net_eur, 2),

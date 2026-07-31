@@ -215,7 +215,7 @@
   <text x="720" y="818" class="legendnum">⑭</text>
   <text x="745" y="818" class="legend"><tspan fill="#8a5a00" font-weight="bold">Photovolt.</tspan> (Ppv_kWc, puissance crête), PR_pv (ratio de performance), seer (SEER de la PAC de froid)</text>
 
-  <text x="720" y="850" class="legend" font-style="italic">États intégrés (12) : Tair, T1…T6, et 5 énergies cumulées Eheat/Ecool/Egrid_cool/Eself_cool/Eexport</text>
+  <text x="720" y="850" class="legend" font-style="italic">États intégrés (12) : Tair, T1…T6, et 5 énergies cumulées Eheat/Ecool/Egrid_total/Eself_cool/Eexport</text>
   <text x="720" y="872" class="legend" font-style="italic">(intégrées seulement après 14 j de mise en régime — cf. section "Équations résolues").</text>
   <text x="720" y="900" class="legend" font-weight="bold">Orangé/gras : les 5 curseurs de l'app (Chauffage, Climatisation,</text>
   <text x="720" y="920" class="legend" font-weight="bold">Photovolt., Isolation ext./int.).</text>

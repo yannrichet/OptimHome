@@ -25,7 +25,7 @@ WEATHER_PATH = os.path.join(REPO_ROOT, "tests", "fixtures", "weather_reference.t
 OUTPUT_CSV = os.path.join(REPO_ROOT, "tests", "fixtures", "reference_openmodelica.csv")
 
 COLUMNS = ["time", "Tair", "Tout", "Qheat", "Pgrid_cool", "Pself_cool",
-           "Egrid_cool", "Eself_cool", "Eexport", "Eheat", "Ecool"]
+           "Egrid_total", "Eself_cool", "Eexport", "Eheat", "Ecool"]
 
 
 def main():

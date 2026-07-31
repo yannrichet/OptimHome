@@ -23,6 +23,8 @@ __pycache__/
 weather.txt
 weather_nb.txt
 build_nb.mos
+/nsga2.py
+/fzd_analysis/
 
 # Generated data / plots / logs (reproducible via the notebook or app)
 *.csv
