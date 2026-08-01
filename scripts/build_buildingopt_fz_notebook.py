@@ -210,7 +210,7 @@ import requests
 from datetime import date, timedelta
 
 import BuildingTherm as bt
-from indicators import comfort_indicators
+from indicators import capex_estimate, comfort_indicators
 
 LAT, LON = 48.8566, 2.3522          # Paris par défaut ; change librement
 END_DATE = date.today() - timedelta(days=1)  # Open-Meteo n'a pas encore les donnees d'aujourd'hui (decalage d'archivage)
@@ -296,7 +296,7 @@ md(r"""## 3. Variables de conception, objectifs, fonction de simulation
 `Pheat` (Chauffage), `Pcool` (Climatisation), `Ppv_kWc` (Photovolt.),
 `e_ite_cm` (Isolation ext.), `e_iti_cm` (Isolation int.).
 
-**Objectifs** (3, mêmes indicateurs que l'app, tous à **minimiser**) — des degrés-heures
+**Objectifs** (4, mêmes indicateurs que l'app, tous à **minimiser**) — des degrés-heures
 d'inconfort plutôt qu'un simple Tmin/Tmax : plus lisses pour NSGA-II (Tmin/Tmax sont des
 statistiques d'ordre à gradient quasi partout nul ; une somme varie avec chaque variable de
 conception), et plus représentatifs du vécu réel (un pic bref pèse moins qu'un dépassement
@@ -311,7 +311,13 @@ dixièmes de degré :
   horaires).
 - **Chaleur·Heure** [K·h] : `Σ max(0, Tair_h − T_confort_max − tolérance)` — degrés-heures
   au-dessus de la limite haute.
-- **Coût net** [€] : `Egrid_total·prix_elec − Eexport·prix_rachat_pv`, sur la période choisie.
+- **Coût net** [€] : `Egrid_total·prix_elec − Eexport·prix_rachat_pv`, sur la période choisie
+  (OPEX — cout d'exploitation, tous les postes comptent, finances ou non).
+- **CAPEX** [€] : `indicators.capex_estimate()`, investissement estime pour les seuls postes
+  marques comme a financer dans `CAPEX_FLAGS` (defaut : chauffage=0 et PV=0, deja en place ;
+  climatisation=1, isolation ext.=1, isolation int.=1) — sans ce 4e objectif, le front de
+  Pareto pousserait mecaniquement vers le sur-equipement, puisque OPEX seul ne penalise
+  jamais un investissement plus gros.
 
 `simulate_scenario()` appelle le solveur Python (directement) ou le binaire
 OpenModelica (via `fz.fzr()`) selon `SOLVER`, mais renvoie dans les deux cas
@@ -351,8 +357,13 @@ VAR_LABELS = ["Chauffage [W]", "Climatisation [W]", "Photovolt. [kWc]",
 XL = np.array([1000.0, 0.0, 0.0, 0.0, 0.0])       # mêmes bornes que les sliders de l'app
 XU = np.array([12000.0, 6000.0, 9.0, 30.0, 20.0])
 
-OBJ_NAMES = ["DH_froid_Kh", "DH_chaleur_Kh", "Cout_net_eur"]   # tous a minimiser directement
-OBJ_LABELS = ["Froid·Heure [K·h]", "Chaleur·Heure [K·h]", "Coût net [€]"]
+OBJ_NAMES = ["DH_froid_Kh", "DH_chaleur_Kh", "Cout_net_eur", "Capex_eur"]   # tous a minimiser directement
+OBJ_LABELS = ["Froid·Heure [K·h]", "Chaleur·Heure [K·h]", "Coût net [€]", "CAPEX [€]"]
+
+# Postes finances (1) vs deja en place/deja finances (0) -- memes valeurs par
+# defaut que les cases a cocher de l'app (voir indicators.DEFAULT_CAPEX_FLAGS) ;
+# ce notebook n'a pas d'UI, donc fixe ici plutot qu'ajustable au clic.
+CAPEX_FLAGS = {"Pheat": 0, "Pcool": 1, "Ppv_kWc": 0, "e_ite_cm": 1, "e_iti_cm": 1}
 
 OUTPUT_COLS = ["time", "Tair", "Tout", "Qheat", "Pgrid_cool", "Pself_cool",
                "Egrid_total", "Eself_cool", "Eexport"]
@@ -434,8 +445,8 @@ def simulate_scenario(x):
 def building_model(Pheat, Pcool, Ppv_kWc, e_ite_cm, e_iti_cm):
     """Modele fz.fzd() (mode 'model=fonction Python', voir section 4) : recoit
     les 5 variables de conception en argument nomme, renvoie un dict
-    {nom_objectif: valeur} — DH_froid/DH_chaleur/cout sur la periode, apres
-    mise en regime, les 3 a minimiser.
+    {nom_objectif: valeur} — DH_froid/DH_chaleur/cout/capex sur la periode,
+    apres mise en regime, les 4 a minimiser.
 
     DH_froid/DH_chaleur = degres-heures d'inconfort (Sum des depassements
     horaires de la bande de confort, en K.h — meme fonction que l'app,
@@ -443,6 +454,13 @@ def building_model(Pheat, Pcool, Ppv_kWc, e_ite_cm, e_iti_cm):
     contrairement a un min/max, varie avec chaque variable de conception
     (meilleur signal pour NSGA-II) et pese la duree du depassement, pas
     seulement son pic.
+
+    Capex_eur (indicators.capex_estimate, CAPEX_FLAGS ci-dessus) : sans lui,
+    le front de Pareto pousse mecaniquement vers le sur-equipement (chaque
+    variable n'a qu'un cout d'exploitation, jamais d'investissement) ; les
+    postes deja en place/deja finances (flag 0) restent comptes dans les
+    degres-heures/cout net (leur cout d'exploitation est reel), mais pas
+    dans ce 4e objectif.
     """
     x = [Pheat, Pcool, Ppv_kWc, e_ite_cm, e_iti_cm]
     sim = simulate_scenario(x)
@@ -452,7 +470,9 @@ def building_model(Pheat, Pcool, Ppv_kWc, e_ite_cm, e_iti_cm):
     egrid_total = sim["Egrid_total"].iloc[-1]
     eexport = sim["Eexport"].iloc[-1]
     cout = egrid_total * PRIX_ELEC - eexport * PRIX_RACHAT_PV
-    return {"DH_froid_Kh": DH_froid, "DH_chaleur_Kh": DH_chaleur, "Cout_net_eur": cout}
+    Awall = bt.derive_constants(_scenario_params(x))["Awall"]
+    capex = capex_estimate(Pheat, Pcool, Ppv_kWc, e_ite_cm, e_iti_cm, Awall, flags=CAPEX_FLAGS)
+    return {"DH_froid_Kh": DH_froid, "DH_chaleur_Kh": DH_chaleur, "Cout_net_eur": cout, "Capex_eur": capex}
 
 
 # sanity check sur un scenario "par defaut" (memes valeurs que l'app au chargement)
@@ -476,7 +496,7 @@ de Pareto plus fin, au prix du temps de calcul (linéaire).
 
 `fz.fzd()` reçoit `building_model` directement comme `model` (mode « modèle
 = fonction Python », pas de fichier d'entrée), `output_expression` comme
-**liste** de 3 noms (un par clé du dict que `building_model` renvoie —
+**liste** de 4 noms (un par clé du dict que `building_model` renvoie —
 c'est ce qui déclenche le mode multi-objectif de `fzd`), et
 `algorithm="nsga2.py"` (téléchargé section 2, code natif de `fz`, pas une
 réimplémentation locale). Chaque évaluation de modèle se fait séquentiellement
@@ -490,7 +510,7 @@ fzd_result = fz.fzd(
     input_path=None,                       # modele = fonction Python : pas de fichier d'entree
     input_variables={name: f"[{lo};{hi}]" for name, lo, hi in zip(VAR_NAMES, XL, XU)},
     model=building_model,
-    output_expression=OBJ_NAMES,           # liste de 3 noms -> mode multi-objectif de fzd
+    output_expression=OBJ_NAMES,           # liste de 4 noms -> mode multi-objectif de fzd
     algorithm="nsga2.py",
     calculators=1,                         # ignore pour un modele fonction (toujours sequentiel)
     algorithm_options={"pop_size": POP_SIZE, "generations": N_GEN, "seed": 1},
@@ -504,7 +524,7 @@ print(fzd_result["analysis"]["text"])
 # ---------------------------------------------------------------------------
 md(r"""## 5. Regroupement du front de Pareto en N scénarios représentatifs
 
-K-means (dans l'espace des 3 objectifs, standardisé) découpe le front en
+K-means (dans l'espace des 4 objectifs, standardisé) découpe le front en
 `N_SCENARIOS` groupes ; pour chacun, on retient la solution la plus proche du
 centroïde comme scénario représentatif. Le front de Pareto final vient de
 `fzd_result["analysis"]["data"]` (calculé par `nsga2.py`, cf. sa méthode
@@ -518,7 +538,7 @@ from sklearn.preprocessing import StandardScaler
 
 N_SCENARIOS = 5   # nombre de scenarios a extraire du front de Pareto
 
-# F : (n_sol, 3) [DH_froid_Kh, DH_chaleur_Kh, cout_net_eur] ; X : (n_sol, 5) variables
+# F : (n_sol, 4) [DH_froid_Kh, DH_chaleur_Kh, cout_net_eur, capex_eur] ; X : (n_sol, 5) variables
 F = np.array(fzd_result["analysis"]["data"]["pareto_F"])
 X = np.array(fzd_result["analysis"]["data"]["pareto_X"])
 
@@ -540,6 +560,7 @@ scenarios_df = pd.DataFrame(X[selected_idx], columns=VAR_NAMES)
 scenarios_df["DH_froid_Kh"] = F[selected_idx, 0]
 scenarios_df["DH_chaleur_Kh"] = F[selected_idx, 1]
 scenarios_df["Cout_net_eur"] = F[selected_idx, 2]
+scenarios_df["Capex_eur"] = F[selected_idx, 3]
 scenarios_df.index = [f"Scénario {i + 1}" for i in range(len(selected_idx))]
 scenarios_df.round(1)
 ''')
@@ -547,7 +568,9 @@ scenarios_df.round(1)
 # ---------------------------------------------------------------------------
 md(r"""## 6. Front de Pareto (3D) : degrés-heures froid / chaleur / coût
 
-En plus du front de Pareto final et des scénarios retenus, ce graphique
+Projection sur 3 des 4 objectifs (le CAPEX n'a pas d'axe ici — voir la vue
+en coordonnées parallèles, section 7, pour les 4 à la fois). En plus du
+front de Pareto final et des scénarios retenus, ce graphique
 affiche aussi (en fond, points pâles) **toutes** les évaluations de toutes
 les générations — disponibles directement via `fzd_result["XY"]`, un
 DataFrame que `fz` construit automatiquement (variables + sorties de chaque
@@ -575,7 +598,7 @@ fig.add_trace(go.Scatter3d(
 ))
 fig.update_layout(
     scene=dict(xaxis_title="Froid·Heure [K·h]", yaxis_title="Chaleur·Heure [K·h]", zaxis_title="Coût net [€]"),
-    title="Front de Pareto à 3 objectifs (fz.fzd + nsga2.py) — scénarios représentatifs en évidence",
+    title="Front de Pareto (3 des 4 objectifs, fz.fzd + nsga2.py) — scénarios représentatifs en évidence",
     height=550, margin=dict(l=0, r=0, t=50, b=0),
 )
 fig.show()
@@ -584,9 +607,9 @@ fig.show()
 # ---------------------------------------------------------------------------
 md(r"""## 7. Vue d'ensemble : coordonnées parallèles
 
-Chaque ligne est une simulation ; les 8 axes sont les 5 variables de
+Chaque ligne est une simulation ; les 9 axes sont les 5 variables de
 conception (`Pheat`, `Pcool`, `Ppv_kWc`, `e_ite_cm`, `e_iti_cm`) suivies des
-3 objectifs (`Froid·Heure`, `Chaleur·Heure`, `Coût net`). Toutes les
+4 objectifs (`Froid·Heure`, `Chaleur·Heure`, `Coût net`, `CAPEX`). Toutes les
 évaluations de `fzd_result["XY"]` sont tracées en gris clair, les 5
 scénarios retenus (centroïdes k-means, section 5) en rouge — un coup d'œil
 pour repérer les compromis (ex. `Ppv_kWc` élevé et `Cout_net_eur` faible
@@ -678,7 +701,8 @@ for i in range(5):
     x = X[idx]
     params_txt = ", ".join(f"{{n}}={{v:.1f}}" for n, v in zip(VAR_NAMES, x))
     title = (f"Scénario {i + 1}/{{len(selected_idx)}} — {{params_txt}}<br>"
-             f"Froid·Heure {{F[idx, 0]:.0f}} K·h · Chaleur·Heure {{F[idx, 1]:.0f}} K·h · Coût net {{F[idx, 2]:.0f}} €")
+             f"Froid·Heure {{F[idx, 0]:.0f}} K·h · Chaleur·Heure {{F[idx, 1]:.0f}} K·h · "
+             f"Coût net {{F[idx, 2]:.0f}} € · CAPEX {{F[idx, 3]:.0f}} €")
     plot_scenario(x, title).show()
 ''')
 

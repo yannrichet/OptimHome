@@ -163,7 +163,7 @@ import requests
 from datetime import date, timedelta
 
 import BuildingTherm as bt
-from indicators import comfort_indicators
+from indicators import capex_estimate, comfort_indicators
 
 LAT, LON = 48.8566, 2.3522          # Paris par défaut ; change librement
 END_DATE = date.today() - timedelta(days=1)  # Open-Meteo n'a pas encore les donnees d'aujourd'hui (decalage d'archivage)
@@ -244,9 +244,10 @@ print("Algorithme GPareto/rlibkriging (gpareto_rlibkriging.py) prêt.")
 md(r"""## 3. Variables de conception, objectifs, fonction de simulation
 
 Identique à `BuildingOpt_fz.ipynb` : **5 variables de conception** (`Pheat`,
-`Pcool`, `Ppv_kWc`, `e_ite_cm`, `e_iti_cm`), **3 objectifs** à minimiser
-(Froid·Heure, Chaleur·Heure, Coût net) calculés par `building_model()`, la
-fonction passée telle quelle à `fz.fzd()` comme modèle.""")
+`Pcool`, `Ppv_kWc`, `e_ite_cm`, `e_iti_cm`), **4 objectifs** à minimiser
+(Froid·Heure, Chaleur·Heure, Coût net, CAPEX — voir `BuildingOpt_fz.ipynb`
+section 3 pour le detail des formules, y compris `CAPEX_FLAGS`) calculés par
+`building_model()`, la fonction passée telle quelle à `fz.fzd()` comme modèle.""")
 
 # ---------------------------------------------------------------------------
 code(r'''import hashlib
@@ -271,8 +272,13 @@ VAR_LABELS = ["Chauffage [W]", "Climatisation [W]", "Photovolt. [kWc]",
 XL = np.array([1000.0, 0.0, 0.0, 0.0, 0.0])       # mêmes bornes que les sliders de l'app
 XU = np.array([12000.0, 6000.0, 9.0, 30.0, 20.0])
 
-OBJ_NAMES = ["DH_froid_Kh", "DH_chaleur_Kh", "Cout_net_eur"]   # tous a minimiser directement
-OBJ_LABELS = ["Froid·Heure [K·h]", "Chaleur·Heure [K·h]", "Coût net [€]"]
+OBJ_NAMES = ["DH_froid_Kh", "DH_chaleur_Kh", "Cout_net_eur", "Capex_eur"]   # tous a minimiser directement
+OBJ_LABELS = ["Froid·Heure [K·h]", "Chaleur·Heure [K·h]", "Coût net [€]", "CAPEX [€]"]
+
+# Postes finances (1) vs deja en place/deja finances (0) -- memes valeurs par
+# defaut que les cases a cocher de l'app (voir indicators.DEFAULT_CAPEX_FLAGS) ;
+# ce notebook n'a pas d'UI, donc fixe ici plutot qu'ajustable au clic.
+CAPEX_FLAGS = {"Pheat": 0, "Pcool": 1, "Ppv_kWc": 0, "e_ite_cm": 1, "e_iti_cm": 1}
 
 OUTPUT_COLS = ["time", "Tair", "Tout", "Qheat", "Pgrid_cool", "Pself_cool",
                "Egrid_total", "Eself_cool", "Eexport"]
@@ -350,8 +356,9 @@ def simulate_scenario(x):
 def building_model(Pheat, Pcool, Ppv_kWc, e_ite_cm, e_iti_cm):
     """Modele fz.fzd() (mode 'model=fonction Python', voir section 4) : recoit
     les 5 variables de conception en argument nomme, renvoie un dict
-    {nom_objectif: valeur} — DH_froid/DH_chaleur/cout sur la periode, apres
-    mise en regime, les 3 a minimiser (meme fonction que BuildingOpt_fz.ipynb)."""
+    {nom_objectif: valeur} — DH_froid/DH_chaleur/cout/capex sur la periode,
+    apres mise en regime, les 4 a minimiser (meme fonction que BuildingOpt_fz.ipynb,
+    y compris CAPEX_FLAGS/indicators.capex_estimate ci-dessus)."""
     x = [Pheat, Pcool, Ppv_kWc, e_ite_cm, e_iti_cm]
     sim = simulate_scenario(x)
     sim_p = sim.iloc[WARMUP_HOURS:] if len(sim) > WARMUP_HOURS else sim
@@ -360,7 +367,9 @@ def building_model(Pheat, Pcool, Ppv_kWc, e_ite_cm, e_iti_cm):
     egrid_total = sim["Egrid_total"].iloc[-1]
     eexport = sim["Eexport"].iloc[-1]
     cout = egrid_total * PRIX_ELEC - eexport * PRIX_RACHAT_PV
-    return {"DH_froid_Kh": DH_froid, "DH_chaleur_Kh": DH_chaleur, "Cout_net_eur": cout}
+    Awall = bt.derive_constants(_scenario_params(x))["Awall"]
+    capex = capex_estimate(Pheat, Pcool, Ppv_kWc, e_ite_cm, e_iti_cm, Awall, flags=CAPEX_FLAGS)
+    return {"DH_froid_Kh": DH_froid, "DH_chaleur_Kh": DH_chaleur, "Cout_net_eur": cout, "Capex_eur": capex}
 
 
 # sanity check sur un scenario "par defaut" (memes valeurs que l'app au chargement)
@@ -372,7 +381,7 @@ print("objectifs (defaut app) :", building_model(8000, 2000, 3.0, 16.0, 0.0))
 md(r"""## 4. Optimisation multi-objectif (GPareto + rlibkriging via `fz.fzd()`)
 
 `fz.fzd()` reçoit `building_model` directement comme `model`,
-`output_expression` comme liste de 3 noms (mode multi-objectif), et
+`output_expression` comme liste de 4 noms (mode multi-objectif), et
 `algorithm="gpareto_rlibkriging.py"` (téléchargé section 2). Options
 (`algorithm_options`) :
 
@@ -403,7 +412,7 @@ fzd_result = fz.fzd(
     input_path=None,                       # modele = fonction Python : pas de fichier d'entree
     input_variables={name: f"[{lo};{hi}]" for name, lo, hi in zip(VAR_NAMES, XL, XU)},
     model=building_model,
-    output_expression=OBJ_NAMES,           # liste de 3 noms -> mode multi-objectif de fzd
+    output_expression=OBJ_NAMES,           # liste de 4 noms -> mode multi-objectif de fzd
     algorithm="gpareto_rlibkriging.py",
     calculators=1,                         # ignore pour un modele fonction (toujours sequentiel)
     algorithm_options={"n_init": N_INIT, "iterations": ITERATIONS, "q": Q, "seed": 1},
@@ -417,7 +426,7 @@ print(fzd_result["analysis"]["text"])
 # ---------------------------------------------------------------------------
 md(r"""## 5. Regroupement du front de Pareto en N scénarios représentatifs
 
-Identique à `BuildingOpt_fz.ipynb` : k-means (dans l'espace des 3 objectifs,
+Identique à `BuildingOpt_fz.ipynb` : k-means (dans l'espace des 4 objectifs,
 standardisé) découpe le front de Pareto (`fzd_result["analysis"]["data"]`,
 calculé par `gpareto_rlibkriging.py`, même schéma `pareto_X`/`pareto_F` que
 `nsga2.py`) en `N_SCENARIOS` groupes, et retient pour chacun la solution la
@@ -429,7 +438,7 @@ from sklearn.preprocessing import StandardScaler
 
 N_SCENARIOS = 5   # nombre de scenarios a extraire du front de Pareto
 
-# F : (n_sol, 3) [DH_froid_Kh, DH_chaleur_Kh, cout_net_eur] ; X : (n_sol, 5) variables
+# F : (n_sol, 4) [DH_froid_Kh, DH_chaleur_Kh, cout_net_eur, capex_eur] ; X : (n_sol, 5) variables
 F = np.array(fzd_result["analysis"]["data"]["pareto_F"])
 X = np.array(fzd_result["analysis"]["data"]["pareto_X"])
 
@@ -451,6 +460,7 @@ scenarios_df = pd.DataFrame(X[selected_idx], columns=VAR_NAMES)
 scenarios_df["DH_froid_Kh"] = F[selected_idx, 0]
 scenarios_df["DH_chaleur_Kh"] = F[selected_idx, 1]
 scenarios_df["Cout_net_eur"] = F[selected_idx, 2]
+scenarios_df["Capex_eur"] = F[selected_idx, 3]
 scenarios_df.index = [f"Scénario {i + 1}" for i in range(len(selected_idx))]
 scenarios_df.round(1)
 ''')
@@ -458,8 +468,10 @@ scenarios_df.round(1)
 # ---------------------------------------------------------------------------
 md(r"""## 6. Front de Pareto (3D) : degrés-heures froid / chaleur / coût
 
-Comme dans `BuildingOpt_fz.ipynb`, `fzd_result["XY"]` donne accès à
-**toutes** les évaluations (plan initial + points EGO), affichées en fond.""")
+Projection sur 3 des 4 objectifs (le CAPEX n'a pas d'axe ici — voir la vue
+en coordonnées parallèles, section 7). Comme dans `BuildingOpt_fz.ipynb`,
+`fzd_result["XY"]` donne accès à **toutes** les évaluations (plan initial +
+points EGO), affichées en fond.""")
 
 # ---------------------------------------------------------------------------
 code(r'''XY = fzd_result["XY"]
@@ -482,7 +494,7 @@ fig.add_trace(go.Scatter3d(
 ))
 fig.update_layout(
     scene=dict(xaxis_title="Froid·Heure [K·h]", yaxis_title="Chaleur·Heure [K·h]", zaxis_title="Coût net [€]"),
-    title="Front de Pareto à 3 objectifs (fz.fzd + GPareto/rlibkriging) — scénarios représentatifs en évidence",
+    title="Front de Pareto (3 des 4 objectifs, fz.fzd + GPareto/rlibkriging) — scénarios représentatifs en évidence",
     height=550, margin=dict(l=0, r=0, t=50, b=0),
 )
 fig.show()
@@ -491,9 +503,9 @@ fig.show()
 # ---------------------------------------------------------------------------
 md(r"""## 7. Vue d'ensemble : coordonnées parallèles
 
-Chaque ligne est une simulation ; les 8 axes sont les 5 variables de
+Chaque ligne est une simulation ; les 9 axes sont les 5 variables de
 conception (`Pheat`, `Pcool`, `Ppv_kWc`, `e_ite_cm`, `e_iti_cm`) suivies des
-3 objectifs (`Froid·Heure`, `Chaleur·Heure`, `Coût net`). Toutes les
+4 objectifs (`Froid·Heure`, `Chaleur·Heure`, `Coût net`, `CAPEX`). Toutes les
 évaluations de `fzd_result["XY"]` (plan initial + points EGO) sont tracées
 en gris clair, les 5 scénarios retenus (centroïdes k-means, section 5) en
 rouge — un coup d'œil pour repérer les compromis (ex. `Ppv_kWc` élevé et
@@ -585,7 +597,8 @@ for i in range(5):
     x = X[idx]
     params_txt = ", ".join(f"{{n}}={{v:.1f}}" for n, v in zip(VAR_NAMES, x))
     title = (f"Scénario {i + 1}/{{len(selected_idx)}} — {{params_txt}}<br>"
-             f"Froid·Heure {{F[idx, 0]:.0f}} K·h · Chaleur·Heure {{F[idx, 1]:.0f}} K·h · Coût net {{F[idx, 2]:.0f}} €")
+             f"Froid·Heure {{F[idx, 0]:.0f}} K·h · Chaleur·Heure {{F[idx, 1]:.0f}} K·h · "
+             f"Coût net {{F[idx, 2]:.0f}} € · CAPEX {{F[idx, 3]:.0f}} €")
     plot_scenario(x, title).show()
 ''')
 

@@ -35,3 +35,41 @@ def comfort_indicators(Tint_period_C, T_confort_min, T_confort_max, tolerance=DE
     DH_froid = (lo - Tint_period_C).clip(lower=0).sum()
     DH_chaleur = (Tint_period_C - hi).clip(lower=0).sum()
     return heures_inconfort, DH_froid, DH_chaleur
+
+
+# Estimation grossiere, marche FR (a ajuster) — que le poste soit finance ou
+# non depend des drapeaux 0/1 passes a capex_estimate(), pas de ces couts
+# unitaires eux-memes.
+CAPEX_UNIT_COSTS = {
+    "Pheat": 0.10,       # chauffage electrique resistif, convecteurs poses [euros/W]
+    "Pcool": 1.20,       # PAC reversible / clim split, posee [euros/W]
+    "Ppv_kWc": 2000.0,   # photovoltaique pose, onduleur inclus [euros/kWc]
+    "e_ite_cm": 7.0,     # isolation thermique exterieure, pose+enduit [euros/m2/cm]
+    "e_iti_cm": 5.0,     # isolation thermique interieure, pose+finition [euros/m2/cm]
+}
+
+DEFAULT_CAPEX_FLAGS = {
+    # 1 = ce poste est un investissement a financer (compte dans le CAPEX) ;
+    # 0 = deja en place/deja finance, exclu du CAPEX (mais son cout
+    # d'exploitation reste bien compte dans les degres-heures/cout net).
+    "Pheat": 0, "Pcool": 1, "Ppv_kWc": 0, "e_ite_cm": 1, "e_iti_cm": 1,
+}
+
+
+def capex_estimate(Pheat, Pcool, Ppv_kWc, e_ite_cm, e_iti_cm, Awall, flags=None):
+    """CAPEX total [euros] pour les 5 variables de conception, chacune
+    incluse ou non selon `flags` (dict {nom: 0/1}, defaut DEFAULT_CAPEX_FLAGS) :
+    ex. l'installation de chauffage deja en place n'a pas a etre refinancee,
+    seule une nouvelle climatisation ou de l'isolation supplementaire compte.
+
+    CAPEX = Σ flag[v] * cout_unitaire[v] * valeur[v], les deux postes
+    d'isolation etant proportionnels a la surface de mur (Awall, cf.
+    BuildingTherm.derive_constants()) en plus de l'epaisseur."""
+    f = dict(DEFAULT_CAPEX_FLAGS, **(flags or {}))
+    return (
+        f["Pheat"] * CAPEX_UNIT_COSTS["Pheat"] * Pheat
+        + f["Pcool"] * CAPEX_UNIT_COSTS["Pcool"] * Pcool
+        + f["Ppv_kWc"] * CAPEX_UNIT_COSTS["Ppv_kWc"] * Ppv_kWc
+        + f["e_ite_cm"] * CAPEX_UNIT_COSTS["e_ite_cm"] * Awall * e_ite_cm
+        + f["e_iti_cm"] * CAPEX_UNIT_COSTS["e_iti_cm"] * Awall * e_iti_cm
+    )

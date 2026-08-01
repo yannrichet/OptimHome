@@ -30,7 +30,7 @@ import streamlit as st
 from streamlit_folium import st_folium
 from streamlit_geolocation import streamlit_geolocation
 
-from indicators import DEFAULT_TOLERANCE_C, comfort_indicators
+from indicators import DEFAULT_CAPEX_FLAGS, DEFAULT_TOLERANCE_C, capex_estimate, comfort_indicators
 import weather as weather_lib
 
 WORK = os.path.dirname(os.path.abspath(__file__))
@@ -294,6 +294,27 @@ with page_col_right:
         help="Épaisseur de l'isolant thermique par l'intérieur (e_iti, ITI), posé côté intérieur du mur structurel.",
     )
 
+    capex_pheat = slider_col1.checkbox(
+        "Financer (CAPEX)", value=bool(DEFAULT_CAPEX_FLAGS["Pheat"]), key="capex_pheat",
+        help="Compter le chauffage dans le CAPEX. Décoché par défaut : on suppose l'installation déjà en place/déjà financée.",
+    )
+    capex_pcool = slider_col2.checkbox(
+        "Financer (CAPEX)", value=bool(DEFAULT_CAPEX_FLAGS["Pcool"]), key="capex_pcool",
+        help="Compter la climatisation dans le CAPEX.",
+    )
+    capex_ppv = slider_col3.checkbox(
+        "Financer (CAPEX)", value=bool(DEFAULT_CAPEX_FLAGS["Ppv_kWc"]), key="capex_ppv",
+        help="Compter le photovoltaïque dans le CAPEX. Décoché par défaut : on suppose l'installation déjà en place/déjà financée.",
+    )
+    capex_ite = slider_col4.checkbox(
+        "Financer (CAPEX)", value=bool(DEFAULT_CAPEX_FLAGS["e_ite_cm"]), key="capex_ite",
+        help="Compter l'isolation extérieure dans le CAPEX.",
+    )
+    capex_iti = slider_col5.checkbox(
+        "Financer (CAPEX)", value=bool(DEFAULT_CAPEX_FLAGS["e_iti_cm"]), key="capex_iti",
+        help="Compter l'isolation intérieure dans le CAPEX.",
+    )
+
     params = {
         "Pheat": Pheat, "Pcool": Pcool, "ach_day": ach_day, "ach_night": ach_night,
         "e_ite": e_ite_cm / 100.0, "e_iti": e_iti_cm / 100.0,
@@ -304,6 +325,13 @@ with page_col_right:
         "fsol": fsol, "seer": seer,
         "Tset_h": T_confort_min + 273.15, "Tset_c": T_confort_max + 273.15,
     }
+
+    capex_flags = {
+        "Pheat": int(capex_pheat), "Pcool": int(capex_pcool), "Ppv_kWc": int(capex_ppv),
+        "e_ite_cm": int(capex_ite), "e_iti_cm": int(capex_iti),
+    }
+    Awall = BuildingTherm.derive_constants(params)["Awall"]
+    Capex_eur = capex_estimate(Pheat, Pcool, Ppv_kWc, e_ite_cm, e_iti_cm, Awall, flags=capex_flags)
 
     try:
         weather_path, stop_time = prepare_weather(
@@ -348,7 +376,6 @@ with page_col_right:
     Tmin_hiver = Tint_period.min()
     Tmax_ete = Tint_period.max()
     Egrid_total = sim["Egrid_total"].iloc[-1]  # import reseau NET, chauffage+froid, apres autoconso PV
-    Eself_cool = sim["Eself_cool"].iloc[-1]  # autoconsommation PV directe, chauffage+froid
     Eexport = sim["Eexport"].iloc[-1]
     Conso_nette = Egrid_total  # deja net de l'autoconso PV (chauffage compris)
     Cout_net_eur = Conso_nette * prix_elec - Eexport * prix_rachat_pv
@@ -418,6 +445,13 @@ with page_col_right:
     # ---------------------------------------------------------------------------
     # Resultats de simulation, sous le graphique — 2 lignes de 4 indicateurs
     # ---------------------------------------------------------------------------
+    finances = ", ".join(
+        label for label, flag in (
+            ("chauffage", capex_pheat), ("climatisation", capex_pcool), ("PV", capex_ppv),
+            ("isolation ext.", capex_ite), ("isolation int.", capex_iti),
+        ) if flag
+    ) or "aucun poste"
+
     r1c1, r1c2, r1c3, r1c4 = st.columns(4)
     r1c1.metric(
         "Temp min. [°C]", f"{Tmin_hiver:.1f}",
@@ -428,28 +462,31 @@ with page_col_right:
         help="Température intérieure maximale atteinte sur la période choisie (après mise en régime de 14 j).",
     )
     r1c3.metric(
-        "Heures hors confort", f"{heures_inconfort}",
-        help=f"Nombre d'heures, sur les {n_days} j de la période choisie (mise en régime de 14 j déjà exclue), où la température intérieure sort de la bande de confort {T_confort_min:.0f}–{T_confort_max:.0f} °C, avec une tolérance de {DEFAULT_TOLERANCE_C:.0f} °C de part et d'autre (un régulateur proportionnel a toujours un léger écart de régime permanent ; sans marge, quelques dixièmes de degré sous la consigne compteraient à tort comme inconfort).",
+        "OPEX [€]", f"{Cout_net_eur:.0f}",
+        help="Coût net d'exploitation sur la période : conso nette valorisée au prix de l'électricité, moins le surplus PV exporté valorisé au tarif de rachat. Hors CAPEX.",
     )
     r1c4.metric(
-        "Coût [€]", f"{Cout_net_eur:.0f}",
-        help="Coût net sur la période : conso nette valorisée au prix de l'électricité, moins le surplus PV exporté valorisé au tarif de rachat. Hors CAPEX (investissement chauffage/PAC/PV/isolation non inclus).",
+        "CAPEX estimé [€]", f"{Capex_eur:.0f}",
+        help=f"Investissement estimé pour les postes cochés « Financer (CAPEX) » ci-dessus : {finances}. "
+             "Coûts unitaires indicatifs marché FR (indicators.CAPEX_UNIT_COSTS), à ajuster à votre contexte. "
+             "Un poste décoché est supposé déjà en place/déjà financé : son coût d'exploitation reste compté "
+             "dans l'OPEX, mais pas son investissement initial.",
     )
 
     r2c1, r2c2, r2c3, r2c4 = st.columns(4)
     r2c1.metric(
-        "Chaleur·Heure [K·h]", f"{DH_chaleur:.0f}",
-        help=f"Degrés-heures d'inconfort par excès de chaleur : somme, heure par heure, du dépassement au-dessus du seuil de confort max + {DEFAULT_TOLERANCE_C:.0f} °C de tolérance (≈ DJU horaires). Plus représentatif qu'un pic ponctuel de Tmax, car il pèse aussi la durée du dépassement.",
-    )
-    r2c2.metric(
         "Froid·Heure [K·h]", f"{DH_froid:.0f}",
         help=f"Degrés-heures d'inconfort par manque de chauffage : somme, heure par heure, du déficit de température sous le seuil de confort min − {DEFAULT_TOLERANCE_C:.0f} °C de tolérance. Plus représentatif qu'un pic ponctuel de Tmin, car il pèse aussi la durée du déficit.",
     )
+    r2c2.metric(
+        "Chaleur·Heure [K·h]", f"{DH_chaleur:.0f}",
+        help=f"Degrés-heures d'inconfort par excès de chaleur : somme, heure par heure, du dépassement au-dessus du seuil de confort max + {DEFAULT_TOLERANCE_C:.0f} °C de tolérance (≈ DJU horaires). Plus représentatif qu'un pic ponctuel de Tmax, car il pèse aussi la durée du dépassement.",
+    )
     r2c3.metric(
-        "Conso nette [kWh]", f"{Conso_nette:.0f}",
-        help=f"Électricité importée du réseau pour le chauffage et le rafraîchissement sur les {n_days} j de la période choisie, après déduction de l'autoconsommation PV.",
+        "Heures hors confort", f"{heures_inconfort}",
+        help=f"Nombre d'heures, sur les {n_days} j de la période choisie (mise en régime de 14 j déjà exclue), où la température intérieure sort de la bande de confort {T_confort_min:.0f}–{T_confort_max:.0f} °C, avec une tolérance de {DEFAULT_TOLERANCE_C:.0f} °C de part et d'autre (un régulateur proportionnel a toujours un léger écart de régime permanent ; sans marge, quelques dixièmes de degré sous la consigne compteraient à tort comme inconfort).",
     )
     r2c4.metric(
-        "Autoconso PV [kWh]", f"{Eself_cool:.0f}",
-        help=f"Production photovoltaïque consommée directement sur place pour le chauffage et le rafraîchissement sur les {n_days} j de la période choisie (sans passer par le réseau).",
+        "Conso nette [kWh]", f"{Conso_nette:.0f}",
+        help=f"Électricité importée du réseau pour le chauffage et le rafraîchissement sur les {n_days} j de la période choisie, après déduction de l'autoconsommation PV.",
     )
